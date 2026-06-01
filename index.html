@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TIE</title>
-<title>by Structure and Flow</title>
+<title>Time Log</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 :root{
@@ -26,7 +25,6 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;min-height:100vh;padding:28px 20px;}
 h1{font-size:26px;font-weight:normal;letter-spacing:-.5px;margin-bottom:3px;}
-h5{ font-size: 0.52rem; color: var(--text3); letter-spacing: 0.06em; font-family: 'DM Sans', sans-serif; opacity: 0.7; white-space: nowrap;}
 .clock{font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;}
 
 /* ── TAB BAR ── */
@@ -304,8 +302,8 @@ tbody td{padding:8px 14px;vertical-align:middle;}
 </style>
 </head>
 <body>
-<h1>TIE</h1>
-<h5>by Structure and Flow</h5>
+<h1 style="letter-spacing:-.5px;margin-bottom:1px;">TIE</h1>
+<div style="font-size:12px;color:var(--text3);font-family:var(--font);font-style:italic;margin-bottom:14px;">by Structure and Flow</div>
 <div class="clock" id="clock"></div>
 
 <!-- TAB BAR -->
@@ -445,7 +443,7 @@ tbody td{padding:8px 14px;vertical-align:middle;}
   <div class="onboard-modal">
     <!-- Step 1: voice choice -->
     <div class="onboard-step active" id="onboard-s1">
-      <h2>👋 Welcome to TIE!</h2>
+      <h2>👋 Welcome to Time Log!</h2>
       <div class="onboard-sub">How would you like the tutorial?</div>
       <div class="onboard-choice-row">
         <div class="onboard-choice" id="ob-read" onclick="obSelectMode('read')">
@@ -532,7 +530,18 @@ let appSettings=(()=>{
 function saveAppSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings));}
 function saveCoreTabName(key,val){
   appSettings.coreNames[key]=val.trim()||{tracker:'Tracker',dashboard:'Dashboard',chairman:'Agenda'}[key];
-  saveAppSettings();renderTabBar();
+  saveAppSettings();
+  renderTabBar();
+  // If renaming the chairman key, update the default tab name and its reports
+  if(key==='chairman'){
+    const defaultTab=chTabs[0];
+    if(defaultTab){
+      defaultTab.name=appSettings.coreNames.chairman;
+      saveCHTabs();
+      savedReports=savedReports.map(r=>r.tabId===defaultTab.id?{...r,tabName:defaultTab.name}:r);
+      saveReports();
+    }
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -586,7 +595,14 @@ function removeChairmanTab(id){
 
 function renameChairmanTab(id,name){
   const t=chTabs.find(x=>x.id===id);
-  if(t){t.name=name.trim()||t.name;saveCHTabs();renderTabBar();}
+  if(t){
+    t.name=name.trim()||t.name;
+    saveCHTabs();
+    renderTabBar();
+    // Update tabName on any existing saved reports for this tab
+    savedReports=savedReports.map(r=>r.tabId===id?{...r,tabName:t.name}:r);
+    saveReports();
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -630,8 +646,8 @@ function renderTabBar(){
   const bar=document.getElementById('tab-bar');
   const names=appSettings.coreNames;
   const tabs=[
-    {id:'tracker',label:names.tracker||'Tracker',icon:'ti-clock',core:true},
     {id:'dashboard',label:names.dashboard||'Dashboard',icon:'ti-chart-bar',core:true},
+    {id:'tracker',label:names.tracker||'Tracker',icon:'ti-clock',core:true},
     ...chTabs.map((t,i)=>({id:t.id,label:t.name,icon:'ti-gavel',core:i===0}))
   ];
   bar.innerHTML=tabs.map(t=>`
@@ -706,7 +722,12 @@ function chTabHTML(id){
   <div class="agenda-list" id="agenda-list-${id}"></div>
   <div id="ch-empty-${id}" class="empty-state" style="display:none;"><i class="ti ti-list" aria-hidden="true"></i>No topics yet.</div>
   <div id="ch-report-section-${id}" style="margin-top:24px;display:none;">
-    <div class="ptitle">Post-meeting report</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div class="ptitle" style="margin:0;">Post-meeting report</div>
+      <button class="btn btn-sm btn-accent" onclick="chManualSaveReport('${id}')">
+        <i class="ti ti-device-floppy" aria-hidden="true"></i> Save to reports
+      </button>
+    </div>
     <div class="table-wrap">
       <div id="ch-report-summary-${id}"></div>
       <table>
@@ -714,6 +735,7 @@ function chTabHTML(id){
         <tbody id="ch-report-tbody-${id}"></tbody>
       </table>
     </div>
+    <div id="ch-report-saved-msg-${id}" style="display:none;margin-top:8px;font-size:12px;font-family:var(--mono);color:var(--accent);"></div>
   </div>`;
 }
 
@@ -884,6 +906,50 @@ function chUpdateTopicAllocLabel(id,ti){
   if(el) el.textContent=chTopicEffectiveMins(t)+'m';
 }
 
+// Recalculate and update the overall progress bar from manually entered times
+function chUpdateOverallBar(id){
+  const data=chGetData(id);
+  const totalMins=parseFloat(data.totalMins)||60;
+  // Sum all actual time used across all topics/subs
+  let usedMins=0;
+  data.topics.forEach(t=>{
+    const subs=t.subtopics||[];
+    if(subs.length>0){
+      const a=chTopicActualMins(t);
+      if(a!==null) usedMins+=a;
+    } else {
+      const a=chActualMins(t);
+      if(a!==null) usedMins+=a;
+    }
+  });
+  if(usedMins<=0) return;
+  const pct=Math.min(100,Math.round((usedMins/totalMins)*100));
+  const remaining=totalMins-usedMins;
+  const pb=document.getElementById('ch-progress-bar-'+id);
+  const pl=document.getElementById('ch-progress-label-'+id);
+  const cl=document.getElementById('ch-big-clock-'+id);
+  const sb=document.getElementById('ch-status-badge-'+id);
+  // Only update when not actively running (timer handles it during live meeting)
+  if(chGetRT(id).running) return;
+  if(pb){
+    pb.style.width=pct+'%';
+    pb.style.background=remaining<0?'var(--red)':remaining<5?'var(--orange)':'var(--accent)';
+  }
+  if(pl) pl.textContent=`${usedMins.toFixed(0)}m used · ${remaining.toFixed(0)}m remaining`;
+  if(cl){
+    cl.textContent=chFmtMins(remaining);
+    cl.className='ch-big-clock'+(remaining<0?' over':remaining<5?' warn':'');
+  }
+  if(sb){
+    const v=usedMins-chAllocatedMins(id);
+    sb.style.display='';
+    sb.className=`variance-tag ${v>0?'var-over':v<0?'var-under':'var-ok'}`;
+    sb.innerHTML=v>0?`<i class="ti ti-trending-up" aria-hidden="true"></i> <strong>+${chFmtMins(v)} over</strong> allocated`:
+                 v<0?`<i class="ti ti-trending-down" aria-hidden="true"></i> <strong>${chFmtMins(Math.abs(v))} under</strong> allocated`:
+                 `<i class="ti ti-check" aria-hidden="true"></i> <strong>On time</strong>`;
+  }
+}
+
 function chRenderAgenda(id){
   const list=document.getElementById('agenda-list-'+id);
   const empty=document.getElementById('ch-empty-'+id);
@@ -940,10 +1006,10 @@ function chRenderAgenda(id){
         <div class="actual-row">
           <label>Actual start</label>
           <input class="time-input" type="time" value="${escAttr(t.actualStart||'')}"
-            oninput="chGetData('${id}').topics[${ti}].actualStart=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+            oninput="chGetData('${id}').topics[${ti}].actualStart=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});chUpdateOverallBar('${id}');"/>
           <label>end</label>
           <input class="time-input" type="time" value="${escAttr(t.actualEnd||'')}"
-            oninput="chGetData('${id}').topics[${ti}].actualEnd=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+            oninput="chGetData('${id}').topics[${ti}].actualEnd=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});chUpdateOverallBar('${id}');"/>
           <span id="var-topic-${id}-${ti}" class="variance-tag" style="display:none;"></span>
         </div>`:''}
         ${hasSubs?`<div id="var-topic-${id}-${ti}" class="variance-tag" style="display:none;margin:6px 0 4px;"></div>`:''}
@@ -978,10 +1044,10 @@ function chSubHtml(id,ti,si,s){
   <div class="actual-row" style="padding-left:12px;gap:6px;flex-wrap:wrap;">
     <label>Start</label>
     <input class="time-input" type="time" value="${escAttr(s.actualStart||'')}"
-      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].actualStart=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].actualStart=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});chUpdateOverallBar('${id}');"/>
     <label>End</label>
     <input class="time-input" type="time" value="${escAttr(s.actualEnd||'')}"
-      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].actualEnd=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].actualEnd=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});chUpdateOverallBar('${id}');"/>
     <span id="var-sub-${id}-${ti}-${si}" class="variance-tag" style="display:none;"></span>
   </div>`;
 }
@@ -1087,6 +1153,9 @@ function chRenderReport(id){
 function chSaveReportSnapshot(id){
   const data=chGetData(id);
   const tabName=chTabs.find(t=>t.id===id)?.name||'Meeting';
+  // Always read the latest name directly from the input field in case oninput hasn't fired
+  const nameInput=document.getElementById('ch-mtg-name-'+id);
+  const meetingName=(nameInput?nameInput.value.trim():'')||data.name||'Untitled meeting';
   const rows=[];
   let totalAlloc=0,totalActual=0,overCount=0,underCount=0;
   data.topics.forEach((t,ti)=>{
@@ -1115,7 +1184,7 @@ function chSaveReportSnapshot(id){
     id:'rep_'+Date.now(),
     tabId:id,
     tabName,
-    meetingName:data.name||'Untitled meeting',
+    meetingName,
     date:new Date().toISOString(),
     totalAlloc,totalActual,overCount,underCount,
     rows
@@ -1123,6 +1192,18 @@ function chSaveReportSnapshot(id){
   savedReports.unshift(report);
   if(savedReports.length>20) savedReports=savedReports.slice(0,20);
   saveReports();
+}
+
+// ── Manual save (for meetings with times already filled in) ──
+function chManualSaveReport(id){
+  chSaveReportSnapshot(id);
+  const msg=document.getElementById('ch-report-saved-msg-'+id);
+  if(msg){
+    msg.style.display='';
+    msg.textContent='✓ Saved to reports — view in Settings';
+    clearTimeout(msg._t);
+    msg._t=setTimeout(()=>{msg.style.display='none';},3000);
+  }
 }
 
 // ── Run mode ──
@@ -1526,7 +1607,7 @@ function getTutSteps(){
   const hi=name?`Hi ${name}! `:'';
   const agendaName=appSettings.coreNames.chairman||'Agenda';
   return[
-    {target:null,title:`${hi}Welcome to TIE!`,body:`This quick tour shows you the key features. You can skip at any time, or replay it from Settings → Help. Choose between reading along or having it narrated to you — set your preference in Settings → Help → Tutorial mode.`},
+    {target:null,title:`${hi}Welcome to Time Log!`,body:`This quick tour shows you the key features. You can skip at any time, or replay it from Settings → Help. Choose between reading along or having it narrated to you — set your preference in Settings → Help → Tutorial mode.`},
     {target:'tab-bar',title:'Tab bar',body:`Swipe the tabs to navigate. Tracker logs your work sessions. Dashboard shows your weekly breakdown. ${agendaName} runs your meetings. Tap the ⚙ gear icon for settings and more.`},
     {target:'tab-tracker',title:'Tracker — log your time',body:'Select an activity from the left panel, then tap Start. Tap again to Stop. The session duration is calculated automatically. Use the Override Time field to backfill a time you forgot to log.'},
     {target:'act-list',title:'Activities',body:'These are your activity categories. Click any to select it. Type a name in the input at the bottom and press + to add your own. Tap × on any chip to remove it.'},
@@ -1712,6 +1793,38 @@ function toggleFaq(i){
 function renderDashAnalytics(){
   const el=document.getElementById('dash-analytics');
   if(!el) return;
+  // Always re-read from localStorage so reports from all agenda tabs are included
+  try{const r=localStorage.getItem(REPORTS_KEY);if(r)savedReports=JSON.parse(r);}catch(e){}
+  // Migrate/normalise old report formats
+  savedReports=savedReports.map(r=>{
+    // Ensure required top-level fields exist
+    if(r.totalAlloc===undefined) r.totalAlloc=0;
+    if(r.totalActual===undefined) r.totalActual=0;
+    if(r.overCount===undefined) r.overCount=0;
+    if(r.underCount===undefined) r.underCount=0;
+    if(!r.meetingName) r.meetingName=r.name||r.tabName||'Untitled meeting';
+    if(!r.tabName) r.tabName='Agenda';
+    if(!r.rows) r.rows=[];
+    // Normalise rows — old format may use different field names
+    r.rows=r.rows.map(row=>{
+      if(row.isTopic===undefined) row.isTopic=!row.isSub;
+      if(row.variance===undefined&&row.actual!==null&&row.alloc!==undefined){
+        row.variance=row.actual!==null?row.actual-row.alloc:null;
+      }
+      if(row.actual===undefined) row.actual=null;
+      if(row.variance===undefined) row.variance=null;
+      return row;
+    });
+    // Recompute totalAlloc/totalActual from rows if they are 0 but rows have data
+    if(r.totalAlloc===0&&r.rows.length){
+      r.totalAlloc=r.rows.filter(x=>x.isTopic).reduce((a,x)=>a+(x.alloc||0),0);
+    }
+    if(r.totalActual===0&&r.rows.length){
+      const topicActuals=r.rows.filter(x=>x.isTopic&&x.actual!==null).map(x=>x.actual);
+      if(topicActuals.length) r.totalActual=topicActuals.reduce((a,b)=>a+b,0);
+    }
+    return r;
+  }).filter(r=>r.rows.length>0||r.totalActual>0);
   el.innerHTML=renderMeetingInsights()+renderActivityAverages();
 }
 
@@ -1719,7 +1832,7 @@ function renderMeetingInsights(){
   if(!savedReports.length){
     return`<div class="insight-card">
       <div class="insight-header"><span class="insight-title">Meeting patterns</span></div>
-      <div class="no-data-note">No saved meeting reports yet. Complete a Chairman meeting to see your patterns here.</div>
+      <div class="no-data-note">No saved meeting reports yet. Complete an Agenda meeting to see your patterns here.</div>
     </div>`;
   }
   // Aggregate across all reports
@@ -1841,7 +1954,7 @@ window.addEventListener('resize',()=>{if(tutActive) renderTutStep();});
 // Boot
 renderTabBar();
 renderChairmanTabsDom();
-showTab('tracker');
+showTab('dashboard');
 renderActivities();
 renderTable();
 updateFilterOptions();
