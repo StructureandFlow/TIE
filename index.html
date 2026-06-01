@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Time Log</title>
+<title>TIE</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 :root{
@@ -302,7 +302,7 @@ tbody td{padding:8px 14px;vertical-align:middle;}
 </style>
 </head>
 <body>
-<h1>Time Log</h1>
+<h1>TIE</h1>
 <div class="clock" id="clock"></div>
 
 <!-- TAB BAR -->
@@ -442,7 +442,7 @@ tbody td{padding:8px 14px;vertical-align:middle;}
   <div class="onboard-modal">
     <!-- Step 1: voice choice -->
     <div class="onboard-step active" id="onboard-s1">
-      <h2>👋 Welcome to Time Log!</h2>
+      <h2>👋 Welcome to TIE!</h2>
       <div class="onboard-sub">How would you like the tutorial?</div>
       <div class="onboard-choice-row">
         <div class="onboard-choice" id="ob-read" onclick="obSelectMode('read')">
@@ -1523,7 +1523,7 @@ function getTutSteps(){
   const hi=name?`Hi ${name}! `:'';
   const agendaName=appSettings.coreNames.chairman||'Agenda';
   return[
-    {target:null,title:`${hi}Welcome to Time Log!`,body:`This quick tour shows you the key features. You can skip at any time, or replay it from Settings → Help. Choose between reading along or having it narrated to you — set your preference in Settings → Help → Tutorial mode.`},
+    {target:null,title:`${hi}Welcome to TIE!`,body:`This quick tour shows you the key features. You can skip at any time, or replay it from Settings → Help. Choose between reading along or having it narrated to you — set your preference in Settings → Help → Tutorial mode.`},
     {target:'tab-bar',title:'Tab bar',body:`Swipe the tabs to navigate. Tracker logs your work sessions. Dashboard shows your weekly breakdown. ${agendaName} runs your meetings. Tap the ⚙ gear icon for settings and more.`},
     {target:'tab-tracker',title:'Tracker — log your time',body:'Select an activity from the left panel, then tap Start. Tap again to Stop. The session duration is calculated automatically. Use the Override Time field to backfill a time you forgot to log.'},
     {target:'act-list',title:'Activities',body:'These are your activity categories. Click any to select it. Type a name in the input at the bottom and press + to add your own. Tap × on any chip to remove it.'},
