@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Log</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#faf9f7;--surface:#fff;--surface2:#f3f2ef;--border:#e2e0db;--border2:#ccc9c2;
+  --text:#1a1917;--text2:#6b6860;--text3:#9b9890;
+  --accent:#2d6a4f;--accent-l:#e8f5ee;--accent-t:#1b4332;
+  --red:#c0392b;--red-l:#fdf0ef;--orange:#d35400;--orange-l:#fef5ec;
+  --blue:#1a5276;--blue-l:#d6eaf8;--blue-t:#154360;
+  --font:'Georgia','Times New Roman',serif;--mono:'Courier New',monospace;
+  --r:6px;--rl:10px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1a1917;--surface:#252422;--surface2:#2e2c2a;--border:#3a3835;--border2:#4a4845;
+  --text:#f0ede8;--text2:#a09d98;--text3:#706e6a;
+  --accent:#52b788;--accent-l:#1b3a2d;--accent-t:#b7e4c7;
+  --red:#e74c3c;--red-l:#2d1a19;--orange:#e67e22;--orange-l:#2d2010;
+  --blue:#2e86c1;--blue-l:#1a3a4a;--blue-t:#7fb3d3;
+}}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;min-height:100vh;padding:28px 20px;}
+h1{font-size:26px;font-weight:normal;letter-spacing:-.5px;margin-bottom:3px;}
+.clock{font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;}
+
+/* ── TAB BAR ── */
+.tabbar-wrap{display:flex;align-items:stretch;border-bottom:1px solid var(--border);margin-bottom:20px;gap:0;}
+.tabs{display:flex;gap:0;overflow-x:auto;flex:1;scrollbar-width:none;-ms-overflow-style:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:9px 15px;font-size:13px;font-family:var(--mono);color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;user-select:none;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-close{display:none;margin-left:4px;opacity:.5;font-size:11px;line-height:1;padding:1px 2px;border-radius:3px;}
+.tab:hover .tab-close{display:inline;}
+.tab-close:hover{opacity:1;color:var(--red);}
+.tabbar-actions{display:flex;align-items:center;gap:4px;padding:0 6px;border-left:1px solid var(--border);flex-shrink:0;}
+.gear-btn{background:none;border:none;cursor:pointer;color:var(--text3);padding:6px;border-radius:var(--r);display:flex;align-items:center;font-size:18px;transition:color .15s,background .15s;}
+.gear-btn:hover{color:var(--text);background:var(--surface2);}
+
+/* ── shared ── */
+.layout{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start;}
+@media(max-width:640px){.layout{grid-template-columns:1fr;}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px;}
+.ptitle{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);margin-bottom:12px;}
+.act-list{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.act-chip{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:7px 9px;font-size:13px;cursor:pointer;transition:border-color .15s,background .15s;}
+.act-chip:hover{border-color:var(--border2);}
+.act-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent-t);}
+.act-chip.running{background:var(--orange-l);border-color:var(--orange);color:var(--orange);}
+.chip-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:var(--orange);flex-shrink:0;animation:pulse 1.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.chip-rm{color:var(--text3);cursor:pointer;border:none;background:none;font-size:13px;padding:2px 4px;border-radius:3px;transition:color .15s,background .15s;line-height:1;flex-shrink:0;}
+.chip-rm:hover{color:var(--red);background:var(--red-l);}
+.add-act{display:flex;gap:6px;}
+.add-act input{flex:1;border:1px solid var(--border);border-radius:var(--r);padding:6px 8px;font-size:12px;background:var(--surface);color:var(--text);font-family:var(--font);outline:none;transition:border-color .15s;}
+.add-act input:focus{border-color:var(--accent);}
+.btn{border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px;font-size:13px;font-family:var(--font);background:var(--surface);color:var(--text);cursor:pointer;transition:background .15s,border-color .15s;display:inline-flex;align-items:center;gap:5px;}
+.btn:hover{background:var(--surface2);}
+.btn:active{transform:scale(.98);}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-accent:hover{opacity:.88;background:var(--accent);}
+.btn-blue{background:var(--blue-l);border-color:var(--blue);color:var(--blue-t);}
+.btn-blue:hover{background:var(--blue);color:#fff;}
+.btn-sm{padding:4px 8px;font-size:12px;}
+.btn-stop{background:var(--orange-l);border-color:var(--orange);color:var(--orange);}
+.btn-stop:hover{background:var(--orange);color:#fff;}
+.btn-danger{color:var(--red);}
+.sel-badge{font-size:13px;color:var(--accent-t);background:var(--accent-l);border:1px solid var(--accent);border-radius:var(--r);padding:7px 10px;display:flex;align-items:center;gap:6px;}
+.no-sel{color:var(--text3);font-size:13px;font-style:italic;padding:5px 0;}
+.fg{display:flex;flex-direction:column;gap:4px;margin-top:9px;}
+.fg label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-family:var(--mono);}
+.fg input,.fg select,.fg textarea{border:1px solid var(--border);border-radius:var(--r);padding:6px 8px;font-size:13px;background:var(--surface);color:var(--text);font-family:var(--font);outline:none;transition:border-color .15s;width:100%;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--accent);}
+.banner{display:none;background:var(--orange-l);border:1px solid var(--orange);border-radius:var(--r);padding:9px 12px;font-size:12px;color:var(--orange);margin-top:9px;align-items:center;gap:7px;flex-wrap:wrap;}
+.banner.show{display:flex;}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.th2{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid var(--border);}
+.th2-title{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);}
+.filter-bar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:9px 16px;border-bottom:1px solid var(--border);}
+.filter-bar select,.filter-bar input{border:1px solid var(--border);border-radius:var(--r);padding:5px 7px;font-size:12px;font-family:var(--mono);background:var(--surface);color:var(--text);outline:none;}
+.filter-bar select:focus,.filter-bar input:focus{border-color:var(--accent);}
+.flabel{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:.5px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{text-align:left;padding:8px 14px;font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:normal;border-bottom:1px solid var(--border);background:var(--surface2);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+tbody td{padding:8px 14px;vertical-align:middle;}
+.act-tag{display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;}
+.dur-tag{display:inline-block;background:var(--accent-l);color:var(--accent-t);border-radius:4px;padding:2px 6px;font-size:11px;font-family:var(--mono);}
+.type-tag{font-size:10px;font-family:var(--mono);padding:2px 6px;border-radius:4px;}
+.t-start{background:var(--accent-l);color:var(--accent-t);}
+.t-stop{background:var(--orange-l);color:var(--orange);}
+.ts-cell{font-family:var(--mono);font-size:11px;color:var(--text2);}
+.note-cell{color:var(--text2);font-style:italic;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ac{text-align:right;white-space:nowrap;}
+.empty-state{text-align:center;padding:36px 18px;color:var(--text3);font-size:13px;}
+.empty-state i{font-size:26px;display:block;margin-bottom:7px;opacity:.4;}
+.sum-bar{display:flex;gap:9px;flex-wrap:wrap;padding:9px 16px;background:var(--surface2);border-top:1px solid var(--border);}
+.sc{font-size:11px;font-family:var(--mono);color:var(--text2);display:flex;align-items:center;gap:3px;}
+.sc strong{color:var(--text);}
+
+/* Dashboard */
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.week-nav{display:flex;align-items:center;gap:9px;}
+.week-label{font-size:12px;font-family:var(--mono);color:var(--text2);min-width:170px;text-align:center;}
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:20px;}
+@media(max-width:700px){.day-grid{grid-template-columns:repeat(4,1fr);}}
+.day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 6px;text-align:center;cursor:pointer;transition:border-color .15s;}
+.day-card:hover{border-color:var(--border2);}
+.day-card.today{border-color:var(--accent);background:var(--accent-l);}
+.day-card.dash-sel{border-width:2px;border-color:var(--border2);}
+.day-card.today.dash-sel{border-color:var(--accent);}
+.day-name{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:4px;}
+.day-card.today .day-name{color:var(--accent-t);}
+.day-total{font-size:15px;font-weight:normal;color:var(--text);font-family:var(--mono);}
+.day-card.today .day-total{color:var(--accent-t);}
+.day-date{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono);}
+.act-bd{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.bd-head{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.bd-head span{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+.act-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);}
+.act-row:last-child{border-bottom:none;}
+.ar-name{flex:0 0 120px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ar-bar{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.ar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .4s ease;}
+.ar-day{flex:0 0 58px;text-align:right;font-size:12px;font-family:var(--mono);color:var(--text2);}
+.ar-week{flex:0 0 58px;text-align:right;font-size:12px;font-family:var(--mono);color:var(--text3);}
+
+/* ── CHAIRMAN ── */
+.ch-top{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px;margin-bottom:18px;}
+.ch-meeting-header{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+.ch-meeting-name{flex:1;min-width:200px;}
+.ch-stats{display:flex;gap:12px;flex-wrap:wrap;}
+.ch-stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;text-align:center;min-width:90px;}
+.ch-stat-label{font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:4px;}
+.ch-stat-val{font-size:18px;font-family:var(--mono);color:var(--text);}
+.ch-stat-val.ok{color:var(--accent);}
+.ch-stat-val.warn{color:var(--orange);}
+.ch-stat-val.over{color:var(--red);}
+.ch-clock-wrap{display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--surface2);border-radius:var(--r);margin-top:14px;}
+.ch-big-clock{font-size:42px;font-family:var(--mono);letter-spacing:2px;color:var(--text);line-height:1;}
+.ch-big-clock.running{color:var(--accent);}
+.ch-big-clock.warn{color:var(--orange);}
+.ch-big-clock.over{color:var(--red);}
+.agenda-list{display:flex;flex-direction:column;gap:10px;}
+.topic-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;}
+.topic-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none;background:var(--surface2);transition:background .15s;}
+.topic-header:hover{background:var(--border);}
+.topic-active .topic-header{background:var(--blue-l);border-bottom:1px solid var(--border);}
+.topic-done .topic-header{background:var(--accent-l);}
+.topic-num{font-size:11px;font-family:var(--mono);color:var(--text3);flex-shrink:0;width:22px;}
+.topic-name-input{flex:1;border:none;background:transparent;font-size:14px;font-family:var(--font);color:var(--text);outline:none;padding:0;}
+.topic-name-input::placeholder{color:var(--text3);}
+.topic-alloc{font-size:12px;font-family:var(--mono);color:var(--text2);flex-shrink:0;}
+.topic-verdict{font-size:11px;font-family:var(--mono);padding:2px 6px;border-radius:4px;flex-shrink:0;}
+.topic-countdown{font-size:15px;font-family:var(--mono);font-weight:normal;flex-shrink:0;min-width:52px;text-align:right;}
+@keyframes overtime-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.tc-over{color:var(--red);font-weight:bold;animation:overtime-pulse 1s ease-in-out infinite;}
+.sub-over{color:var(--red);font-weight:bold;animation:overtime-pulse 1s ease-in-out infinite;}
+.topic-actions{display:flex;gap:5px;flex-shrink:0;}
+.topic-body{padding:10px 14px 14px;border-top:1px solid var(--border);}
+.alloc-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.alloc-row label{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);white-space:nowrap;}
+.min-input{width:64px;border:1px solid var(--border);border-radius:var(--r);padding:5px 7px;font-size:13px;font-family:var(--mono);background:var(--surface);color:var(--text);outline:none;text-align:center;}
+.min-input:focus{border-color:var(--accent);}
+.subtopics{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.sub-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;}
+.sub-row.sub-active{background:var(--blue-l);border-color:var(--blue);}
+.sub-row.sub-done{background:var(--accent-l);}
+.sub-name{flex:1;border:none;background:transparent;font-size:13px;font-family:var(--font);color:var(--text);outline:none;}
+.sub-name::placeholder{color:var(--text3);}
+.sub-alloc{width:56px;border:1px solid var(--border);border-radius:var(--r);padding:4px 6px;font-size:12px;font-family:var(--mono);background:var(--surface);color:var(--text);outline:none;text-align:center;}
+.sub-alloc:focus{border-color:var(--accent);}
+.sub-countdown{font-size:13px;font-family:var(--mono);min-width:46px;text-align:right;flex-shrink:0;}
+.actual-row{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.actual-row label{font-size:10px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+.time-input{width:88px;border:1px solid var(--border);border-radius:var(--r);padding:4px 6px;font-size:12px;font-family:var(--mono);background:var(--surface);color:var(--text);outline:none;}
+.time-input:focus{border-color:var(--accent);}
+.variance-tag{font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:4px;flex-shrink:0;}
+.var-ok{background:var(--accent-l);color:var(--accent-t);}
+.var-over{background:var(--red-l);color:var(--red);}
+.var-under{background:var(--orange-l);color:var(--orange);}
+.run-banner{display:none;position:sticky;top:0;z-index:50;background:var(--blue);color:#fff;padding:10px 20px;font-family:var(--mono);font-size:13px;border-radius:var(--r);margin-bottom:14px;align-items:center;justify-content:space-between;gap:12px;}
+.run-banner.show{display:flex;}
+
+/* ── SETTINGS DRAWER ── */
+.settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;}
+.settings-overlay.open{display:block;}
+.settings-drawer{position:fixed;top:0;right:0;width:340px;max-width:95vw;height:100%;background:var(--surface);border-left:1px solid var(--border2);z-index:201;overflow-y:auto;padding:24px 20px;transform:translateX(100%);transition:transform .25s ease;}
+.settings-overlay.open .settings-drawer{transform:translateX(0);}
+.settings-title{font-size:16px;font-weight:normal;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
+.settings-section{margin-bottom:24px;}
+.settings-section-title{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.rename-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.rename-row label{font-size:13px;color:var(--text2);flex:0 0 90px;}
+.rename-row input{flex:1;border:1px solid var(--border);border-radius:var(--r);padding:6px 8px;font-size:13px;background:var(--surface);color:var(--text);font-family:var(--font);outline:none;}
+.rename-row input:focus{border-color:var(--accent);}
+.ch-tab-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.ch-tab-row input{flex:1;border:1px solid var(--border);border-radius:var(--r);padding:6px 8px;font-size:13px;background:var(--surface);color:var(--text);font-family:var(--font);outline:none;}
+.ch-tab-row input:focus{border-color:var(--accent);}
+
+/* ── REPORTS ── */
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;overflow:hidden;}
+.report-card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:var(--surface2);}
+.report-card-header:hover{background:var(--border);}
+.report-card-body{display:none;padding:12px 14px;border-top:1px solid var(--border);}
+.report-card-body.open{display:block;}
+.report-meta{font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:8px;}
+.report-stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.report-stat{font-size:12px;font-family:var(--mono);}
+.report-stat strong{color:var(--text);}
+.r-over{color:var(--red);}
+.r-under{color:var(--orange);}
+.r-ok{color:var(--accent);}
+
+/* ── SPOTLIGHT TUTORIAL ── */
+.tut-overlay{display:none;position:fixed;inset:0;z-index:500;}
+.tut-overlay.open{display:block;}
+.tut-backdrop{position:fixed;inset:0;pointer-events:all;}
+/* Spotlight box — transparent window with white border, surrounding shadow = dark backdrop */
+.tut-spotlight{
+  position:fixed;background:transparent;border:3px solid rgba(255,255,255,.95);border-radius:10px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.72),0 0 22px 5px rgba(255,255,255,.3);
+  pointer-events:none;z-index:501;
+  transition:top .32s ease,left .32s ease,width .32s ease,height .32s ease;
+}
+@keyframes sp-pulse{0%,100%{box-shadow:0 0 0 9999px rgba(0,0,0,.72),0 0 16px 3px rgba(255,255,255,.2);}50%{box-shadow:0 0 0 9999px rgba(0,0,0,.72),0 0 28px 8px rgba(255,255,255,.55);}}
+.tut-spotlight{animation:sp-pulse 2.4s ease-in-out infinite;}
+.tut-card{
+  position:fixed;background:var(--surface);border:1px solid var(--border2);border-radius:var(--rl);
+  padding:20px;width:min(320px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.4);
+  z-index:502;pointer-events:all;
+  transition:top .32s ease,left .32s ease;
+}
+.tut-arrow{position:absolute;width:0;height:0;border:9px solid transparent;}
+.tut-arrow.up{border-bottom-color:var(--surface);top:-18px;}
+.tut-arrow.down{border-top-color:var(--surface);bottom:-18px;}
+.tut-step{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:6px;}
+.tut-title{font-size:16px;font-weight:normal;margin-bottom:8px;}
+.tut-body{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;}
+.tut-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.tut-dots{display:flex;gap:5px;}
+.tut-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);}
+.tut-dot.active{background:var(--accent);}
+
+/* ── ONBOARDING MODAL ── */
+.onboard-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:16px;}
+.onboard-overlay.open{display:flex;}
+.onboard-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--rl);padding:28px;width:min(400px,96vw);box-shadow:0 12px 40px rgba(0,0,0,.3);}
+.onboard-modal h2{font-size:20px;font-weight:normal;margin-bottom:6px;}
+.onboard-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5;}
+.onboard-step{display:none;}.onboard-step.active{display:block;}
+.onboard-choice-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.onboard-choice{flex:1;min-width:120px;border:2px solid var(--border);border-radius:var(--rl);padding:14px 12px;cursor:pointer;text-align:center;transition:border-color .15s,background .15s;}
+.onboard-choice:hover,.onboard-choice.selected{border-color:var(--accent);background:var(--accent-l);}
+.onboard-choice i{font-size:26px;display:block;margin-bottom:7px;color:var(--accent);}
+.onboard-choice-label{font-size:13px;font-weight:normal;color:var(--text);}
+.onboard-choice-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.onboard-name-wrap{margin-top:14px;}
+.onboard-name-wrap input{width:100%;border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:15px;font-family:var(--font);background:var(--surface);color:var(--text);outline:none;}
+.onboard-name-wrap input:focus{border-color:var(--accent);}
+.onboard-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap;}
+
+/* ── FAQ MODAL ── */
+.faq-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+.faq-overlay.open{display:flex;}
+.faq-modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--rl);padding:24px;width:560px;max-width:100%;margin:auto;}
+.faq-modal h2{font-size:18px;font-weight:normal;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;}
+.faq-item{border-bottom:1px solid var(--border);}
+.faq-item:last-child{border-bottom:none;}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:14px 0;cursor:pointer;font-size:14px;gap:12px;user-select:none;}
+.faq-q:hover{color:var(--accent);}
+.faq-a{display:none;padding:0 0 14px;font-size:13px;color:var(--text2);line-height:1.7;}
+.faq-a.open{display:block;}
+.faq-chevron{flex-shrink:0;transition:transform .2s;color:var(--text3);}
+.faq-item.open .faq-chevron{transform:rotate(180deg);}
+
+/* ── DASHBOARD ANALYTICS ── */
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px;margin-bottom:14px;}
+.insight-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.insight-title{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);}
+.insight-badge{font-size:12px;font-family:var(--mono);padding:3px 9px;border-radius:20px;}
+.insight-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.insight-row:last-child{border-bottom:none;}
+.insight-label{flex:0 0 110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);}
+.insight-bar-wrap{flex:1;height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.insight-bar-fill{height:100%;border-radius:4px;}
+.insight-val{flex:0 0 50px;text-align:right;font-size:12px;font-family:var(--mono);color:var(--text2);}
+.insight-verdict{font-size:13px;color:var(--text2);line-height:1.6;padding:10px 0 2px;}
+.no-data-note{font-size:13px;color:var(--text3);font-style:italic;padding:8px 0;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:300;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--rl);padding:22px;width:370px;max-width:90vw;}
+.modal h2{font-size:15px;font-weight:normal;margin-bottom:16px;}
+.modal-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:16px;}
+</style>
+</head>
+<body>
+<h1>Time Log</h1>
+<div class="clock" id="clock"></div>
+
+<!-- TAB BAR -->
+<div class="tabbar-wrap">
+  <div class="tabs" id="tab-bar"></div>
+  <div class="tabbar-actions">
+    <button class="gear-btn" onclick="openSettings()" title="Settings"><i class="ti ti-settings" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+<!-- TAB CONTENT AREAS -->
+<div id="tab-tracker" style="display:none;">
+  <div class="layout">
+    <div>
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="ptitle">Activities — click to select</div>
+        <div class="act-list" id="act-list"></div>
+        <div class="add-act">
+          <input type="text" id="new-act-input" placeholder="New activity…" maxlength="40"/>
+          <button class="btn btn-sm" onclick="addActivity()"><i class="ti ti-plus" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Quick log</div>
+        <div id="sel-display" class="no-sel">Select an activity →</div>
+        <div id="banner" class="banner"></div>
+        <div class="fg"><label>Override time (optional)</label><input type="datetime-local" id="override-time"/></div>
+        <div class="fg"><label>Note (optional)</label><input type="text" id="quick-note" placeholder="Brief note…" maxlength="100"/></div>
+        <div id="log-btn-wrap" style="margin-top:11px;"></div>
+      </div>
+    </div>
+    <div>
+      <div class="table-wrap">
+        <div class="th2">
+          <span class="th2-title">Raw entries</span>
+          <button class="btn btn-sm btn-danger" onclick="clearAll()"><i class="ti ti-trash" aria-hidden="true"></i> Clear all</button>
+        </div>
+        <div class="filter-bar">
+          <span class="flabel">Filter:</span>
+          <select id="filter-act" onchange="renderTable()"><option value="">All activities</option></select>
+          <input type="date" id="filter-date" onchange="renderTable()"/>
+          <button class="btn btn-sm" onclick="clearFilters()"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+        <table>
+          <thead><tr><th>Activity</th><th>Type</th><th>Timestamp</th><th>Session</th><th>Note</th><th style="text-align:right">Actions</th></tr></thead>
+          <tbody id="log-tbody"></tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display:none;"><i class="ti ti-clock-off" aria-hidden="true"></i>No entries yet.</div>
+        <div class="sum-bar" id="sum-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-dashboard" style="display:none;">
+  <div class="dash-header">
+    <span style="font-size:12px;color:var(--text2);font-family:var(--mono);">Week: Mon – Sun</span>
+    <div class="week-nav">
+      <button class="btn btn-sm" onclick="weekOffset--;renderDash()"><i class="ti ti-chevron-left" aria-hidden="true"></i></button>
+      <span class="week-label" id="week-label"></span>
+      <button class="btn btn-sm" onclick="weekOffset++;renderDash()"><i class="ti ti-chevron-right" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  <div class="day-grid" id="day-grid"></div>
+  <div class="ptitle" id="breakdown-title" style="margin-bottom:10px;">Activity totals</div>
+  <div class="act-bd" id="act-breakdown"></div>
+  <div style="margin-top:7px;font-size:11px;color:var(--text3);font-family:var(--mono);">Click a day card to inspect totals for that day.</div>
+  <div style="margin-top:24px;" id="dash-analytics"></div>
+</div>
+
+<!-- Chairman tabs rendered dynamically -->
+<div id="chairman-tabs-container"></div>
+
+<!-- Settings Drawer -->
+<div class="settings-overlay" id="settings-overlay" onclick="settingsOverlayClick(event)">
+  <div class="settings-drawer" id="settings-drawer">
+    <div class="settings-title">
+      <span><i class="ti ti-settings" style="font-size:15px;vertical-align:-2px;margin-right:6px;" aria-hidden="true"></i>Settings</span>
+      <button class="btn btn-sm" onclick="closeSettings()"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Your name</div>
+      <div class="rename-row">
+        <label>Name</label>
+        <input type="text" id="user-name-input" maxlength="30" placeholder="e.g. Alex" onchange="saveUserName(this.value)"/>
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Used to personalise the tutorial.</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Rename core tabs</div>
+      <div class="rename-row"><label>Tracker</label><input type="text" id="rename-tracker" maxlength="20" placeholder="Tracker" onchange="saveCoreTabName('tracker',this.value)"/></div>
+      <div class="rename-row"><label>Dashboard</label><input type="text" id="rename-dashboard" maxlength="20" placeholder="Dashboard" onchange="saveCoreTabName('dashboard',this.value)"/></div>
+      <div class="rename-row"><label>Agenda</label><input type="text" id="rename-chairman" maxlength="20" placeholder="Agenda" onchange="saveCoreTabName('chairman',this.value)"/></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Agenda tabs</div>
+      <div id="ch-tabs-settings-list"></div>
+      <button class="btn btn-sm btn-accent" onclick="addChairmanTab()" id="add-ch-tab-btn" style="margin-top:8px;"><i class="ti ti-plus" aria-hidden="true"></i> Add agenda tab</button>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px;" id="ch-tab-limit-note"></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Saved meeting reports</div>
+      <div id="reports-list"></div>
+      <div id="reports-empty" style="font-size:13px;color:var(--text3);font-style:italic;">No saved reports yet.</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Backup &amp; Restore</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn btn-sm" onclick="backupData()"><i class="ti ti-download" aria-hidden="true"></i> Export backup</button>
+        <label class="btn btn-sm" style="cursor:pointer;"><i class="ti ti-upload" aria-hidden="true"></i> Import backup<input type="file" accept=".json" style="display:none;" onchange="restoreData(this)"/></label>
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">Export saves all your data as a JSON file. Import overwrites all current data — use with care.</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Help</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-sm" onclick="startTutorial();closeSettings();"><i class="ti ti-school" aria-hidden="true"></i> Show tutorial</button>
+        <button class="btn btn-sm" onclick="openFaq()"><i class="ti ti-help" aria-hidden="true"></i> FAQ</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;font-family:var(--mono);color:var(--text2);">Tutorial mode:</span>
+        <button class="btn btn-sm" id="tut-mode-btn" onclick="toggleTutorialMode()"></button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:4px;">Choose between read-along text or spoken voice narration.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING MODAL (first-run) -->
+<div class="onboard-overlay" id="onboard-overlay">
+  <div class="onboard-modal">
+    <!-- Step 1: voice choice -->
+    <div class="onboard-step active" id="onboard-s1">
+      <h2>👋 Welcome to Time Log!</h2>
+      <div class="onboard-sub">How would you like the tutorial?</div>
+      <div class="onboard-choice-row">
+        <div class="onboard-choice" id="ob-read" onclick="obSelectMode('read')">
+          <i class="ti ti-book" aria-hidden="true"></i>
+          <div class="onboard-choice-label">Read along</div>
+          <div class="onboard-choice-sub">Text only</div>
+        </div>
+        <div class="onboard-choice" id="ob-voice" onclick="obSelectMode('voice')">
+          <i class="ti ti-microphone" aria-hidden="true"></i>
+          <div class="onboard-choice-label">Voice narration</div>
+          <div class="onboard-choice-sub">Spoken aloud</div>
+        </div>
+      </div>
+      <div class="onboard-actions">
+        <button class="btn btn-sm" onclick="obSkip()">Skip tutorial</button>
+        <button class="btn btn-sm btn-accent" id="ob-next1" onclick="obGoStep2()" disabled>Next →</button>
+      </div>
+    </div>
+    <!-- Step 2: name -->
+    <div class="onboard-step" id="onboard-s2">
+      <h2>What's your name?</h2>
+      <div class="onboard-sub">We'll use it to personalise your experience. Totally optional.</div>
+      <div class="onboard-name-wrap">
+        <input type="text" id="ob-name-input" placeholder="Enter your name…" maxlength="30"
+          onkeydown="if(event.key==='Enter')obFinish();"/>
+      </div>
+      <div class="onboard-actions">
+        <button class="btn btn-sm" onclick="obFinish('skip')">Rather not say</button>
+        <button class="btn btn-sm btn-accent" onclick="obFinish()">Let's go →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TUTORIAL OVERLAY -->
+<div class="tut-overlay" id="tut-overlay">
+  <div class="tut-backdrop" id="tut-backdrop" onclick="skipTutorial()"></div>
+  <div class="tut-spotlight" id="tut-spotlight"></div>
+  <div class="tut-card" id="tut-card">
+    <div class="tut-arrow" id="tut-arrow"></div>
+    <div class="tut-step" id="tut-step"></div>
+    <div class="tut-title" id="tut-title"></div>
+    <div class="tut-body" id="tut-body"></div>
+    <div class="tut-actions">
+      <div class="tut-dots" id="tut-dots"></div>
+      <div style="display:flex;gap:7px;">
+        <button class="btn btn-sm" onclick="skipTutorial()">Skip</button>
+        <button class="btn btn-sm btn-accent" id="tut-next-btn" onclick="tutNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ MODAL -->
+<div class="faq-overlay" id="faq-overlay" onclick="faqOverlayClick(event)">
+  <div class="faq-modal">
+    <h2><i class="ti ti-help" style="font-size:16px;vertical-align:-2px;margin-right:6px;" aria-hidden="true"></i>FAQ <button class="btn btn-sm" onclick="closeFaq()" style="margin-left:auto;"><i class="ti ti-x" aria-hidden="true"></i></button></h2>
+    <div id="faq-list"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="edit-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <h2><i class="ti ti-edit" style="font-size:14px;vertical-align:-2px;margin-right:5px;" aria-hidden="true"></i>Edit entry</h2>
+    <div class="fg"><label>Activity</label><select id="edit-act"></select></div>
+    <div class="fg"><label>Type</label><select id="edit-type"><option value="start">Start</option><option value="stop">Stop</option></select></div>
+    <div class="fg"><label>Timestamp</label><input type="datetime-local" id="edit-time"/></div>
+    <div class="fg"><label>Note</label><textarea id="edit-note" style="height:56px;resize:vertical;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="saveEdit()"><i class="ti ti-check" aria-hidden="true"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  APP CONFIG / SETTINGS
+// ══════════════════════════════════════════════
+const SETTINGS_KEY='app_settings_v1';
+let appSettings=(()=>{
+  try{const r=localStorage.getItem(SETTINGS_KEY);if(r)return JSON.parse(r);}catch(e){}
+  return{coreNames:{tracker:'Tracker',dashboard:'Dashboard',chairman:'Agenda'}};
+})();
+function saveAppSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify(appSettings));}
+function saveCoreTabName(key,val){
+  appSettings.coreNames[key]=val.trim()||{tracker:'Tracker',dashboard:'Dashboard',chairman:'Agenda'}[key];
+  saveAppSettings();renderTabBar();
+}
+
+// ══════════════════════════════════════════════
+//  MULTI-CHAIRMAN TABS STATE
+// ══════════════════════════════════════════════
+const CH_TABS_KEY='ch_tabs_v1';
+const REPORTS_KEY='meeting_reports_v1';
+const MAX_EXTRA_CH_TABS=6;
+
+let chTabs=(()=>{
+  try{const r=localStorage.getItem(CH_TABS_KEY);if(r)return JSON.parse(r);}catch(e){}
+  // default: one chairman tab
+  return[{id:'ch_default',name:'Agenda',data:{name:'',totalMins:60,topics:[]}}];
+})();
+
+let savedReports=(()=>{
+  try{const r=localStorage.getItem(REPORTS_KEY);if(r)return JSON.parse(r);}catch(e){}
+  return[];
+})();
+
+function saveCHTabs(){localStorage.setItem(CH_TABS_KEY,JSON.stringify(chTabs));}
+function saveReports(){localStorage.setItem(REPORTS_KEY,JSON.stringify(savedReports));}
+
+function addChairmanTab(){
+  if(chTabs.length>=MAX_EXTRA_CH_TABS+1){return;}
+  const id='ch_'+Date.now();
+  const name='Meeting '+(chTabs.length+1);
+  chTabs.push({id,name,data:{name:'',totalMins:60,topics:[]}});
+  saveCHTabs();
+  renderTabBar();
+  renderChairmanTabsDom();
+  populateSettingsCHTabs();
+  showTab(id);
+}
+
+function removeChairmanTab(id){
+  if(!confirm('Delete this chairman tab and all its data?'))return;
+  // Stop running meeting if active
+  if(chRuntime[id]&&chRuntime[id].running) chStop(id);
+  delete chRuntime[id];
+  chTabs=chTabs.filter(t=>t.id!==id);
+  saveCHTabs();
+  const el=document.getElementById('tab-ch-'+id);
+  if(el) el.remove();
+  renderTabBar();
+  populateSettingsCHTabs();
+  // Switch to first chairman tab or dashboard
+  if(chTabs.length>0) showTab(chTabs[0].id);
+  else showTab('dashboard');
+}
+
+function renameChairmanTab(id,name){
+  const t=chTabs.find(x=>x.id===id);
+  if(t){t.name=name.trim()||t.name;saveCHTabs();renderTabBar();}
+}
+
+// ══════════════════════════════════════════════
+//  ACTIVE TAB STATE
+// ══════════════════════════════════════════════
+let activeTab='tracker';
+
+function showTab(tab){
+  activeTab=tab;
+  // Hide core content panes
+  ['tab-tracker','tab-dashboard'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  // Hide all individual chairman tab divs
+  chTabs.forEach(t=>{
+    const el=document.getElementById('tab-ch-'+t.id);
+    if(el) el.style.display='none';
+  });
+
+  if(tab==='tracker'){
+    document.getElementById('tab-tracker').style.display='';
+  } else if(tab==='dashboard'){
+    document.getElementById('tab-dashboard').style.display='';
+    renderDash();
+  } else {
+    // Chairman tab — show just the matching div
+    const el=document.getElementById('tab-ch-'+tab);
+    if(el){
+      el.style.display='';
+      const t=chTabs.find(x=>x.id===tab);
+      if(t) chInitTabUI(tab);
+    }
+  }
+  renderTabBar();
+}
+
+// ══════════════════════════════════════════════
+//  TAB BAR RENDERING
+// ══════════════════════════════════════════════
+function renderTabBar(){
+  const bar=document.getElementById('tab-bar');
+  const names=appSettings.coreNames;
+  const tabs=[
+    {id:'tracker',label:names.tracker||'Tracker',icon:'ti-clock',core:true},
+    {id:'dashboard',label:names.dashboard||'Dashboard',icon:'ti-chart-bar',core:true},
+    ...chTabs.map((t,i)=>({id:t.id,label:t.name,icon:'ti-gavel',core:i===0}))
+  ];
+  bar.innerHTML=tabs.map(t=>`
+    <div class="tab${activeTab===t.id?' active':''}" onclick="showTab('${t.id}')">
+      <i class="ti ${t.icon}" aria-hidden="true"></i>
+      <span>${escHtml(t.label)}</span>
+      ${!t.core?`<span class="tab-close" onclick="event.stopPropagation();removeChairmanTab('${t.id}')" title="Delete tab"><i class="ti ti-x" aria-hidden="true"></i></span>`:''}
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  CHAIRMAN DOM — one div per tab
+// ══════════════════════════════════════════════
+function renderChairmanTabsDom(){
+  const container=document.getElementById('chairman-tabs-container');
+  chTabs.forEach(t=>{
+    if(document.getElementById('tab-ch-'+t.id)) return; // already exists
+    const div=document.createElement('div');
+    div.id='tab-ch-'+t.id;
+    div.style.display='none';
+    div.innerHTML=chTabHTML(t.id);
+    container.appendChild(div);
+  });
+}
+
+function chTabHTML(id){
+  return`
+  <div class="run-banner" id="rb-${id}">
+    <span><i class="ti ti-player-play" aria-hidden="true"></i> Meeting in progress — <strong id="rb-current-${id}">—</strong></span>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;" onclick="chNextItem('${id}')"><i class="ti ti-arrow-right" aria-hidden="true"></i> Next</button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;" onclick="chStop('${id}')"><i class="ti ti-player-stop" aria-hidden="true"></i> Stop</button>
+    </div>
+  </div>
+  <div class="ch-top">
+    <div class="ch-meeting-header">
+      <div class="ch-meeting-name" style="flex:1;min-width:200px;">
+        <div style="font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:6px;">Meeting name</div>
+        <input type="text" id="ch-mtg-name-${id}" placeholder="Untitled meeting"
+          style="border:none;border-bottom:2px solid var(--border);border-radius:0;padding:4px 2px;font-size:20px;font-family:var(--font);background:transparent;color:var(--text);outline:none;width:100%;"
+          oninput="chGetData('${id}').name=this.value;chSaveTab('${id}');"/>
+      </div>
+      <div class="ch-stats" id="ch-stats-${id}"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <span style="font-size:12px;font-family:var(--mono);color:var(--text2);">Total meeting duration:</span>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" id="ch-total-mins-${id}" placeholder="60" value="60"
+        style="width:70px;border:1px solid var(--border);border-radius:var(--r);padding:5px 8px;font-size:13px;font-family:var(--mono);background:var(--surface);color:var(--text);outline:none;text-align:center;"
+        onchange="chGetData('${id}').totalMins=parseFloat(this.value)||60;chSaveTab('${id}');chRenderStats('${id}');"/>
+      <span style="font-size:12px;font-family:var(--mono);color:var(--text3);">minutes</span>
+      <button class="btn btn-sm btn-accent" onclick="chStartMeeting('${id}')" id="ch-start-btn-${id}"><i class="ti ti-player-play" aria-hidden="true"></i> Start meeting</button>
+      <button class="btn btn-sm" onclick="chResetPrompt('${id}')"><i class="ti ti-refresh" aria-hidden="true"></i> Reset</button>
+    </div>
+    <div class="ch-clock-wrap">
+      <div>
+        <div style="font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:4px;">Overall time remaining</div>
+        <div class="ch-big-clock" id="ch-big-clock-${id}">—</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+        <div style="height:10px;background:var(--surface);border:1px solid var(--border);border-radius:5px;overflow:hidden;">
+          <div id="ch-progress-bar-${id}" style="height:100%;background:var(--accent);width:0%;transition:width .5s;border-radius:5px;"></div>
+        </div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--text3);" id="ch-progress-label-${id}"></div>
+        <div id="ch-status-badge-${id}" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <span class="ptitle" style="margin:0;">Agenda</span>
+    <button class="btn btn-sm btn-accent" onclick="chAddTopic('${id}')"><i class="ti ti-plus" aria-hidden="true"></i> Add topic</button>
+  </div>
+  <div class="agenda-list" id="agenda-list-${id}"></div>
+  <div id="ch-empty-${id}" class="empty-state" style="display:none;"><i class="ti ti-list" aria-hidden="true"></i>No topics yet.</div>
+  <div id="ch-report-section-${id}" style="margin-top:24px;display:none;">
+    <div class="ptitle">Post-meeting report</div>
+    <div class="table-wrap">
+      <div id="ch-report-summary-${id}"></div>
+      <table>
+        <thead><tr><th>Item</th><th>Allocated</th><th>Actual start</th><th>Actual end</th><th>Used</th><th>Variance</th></tr></thead>
+        <tbody id="ch-report-tbody-${id}"></tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+//  CHAIRMAN — per-tab runtime state
+// ══════════════════════════════════════════════
+const chRuntime={};
+
+function chGetRT(id){
+  if(!chRuntime[id]) chRuntime[id]={running:false,meetingStartTs:null,meetingTimer:null,currentIdx:-1,itemStartTs:null,itemTimer:null};
+  return chRuntime[id];
+}
+function chGetData(id){
+  const t=chTabs.find(x=>x.id===id);
+  return t?t.data:{topics:[],name:'',totalMins:60};
+}
+function chSaveTab(id){saveCHTabs();}
+
+function chInitTabUI(id){
+  const data=chGetData(id);
+  const nameEl=document.getElementById('ch-mtg-name-'+id);
+  if(nameEl) nameEl.value=data.name||'';
+  const minsEl=document.getElementById('ch-total-mins-'+id);
+  if(minsEl) minsEl.value=data.totalMins||60;
+  chRenderStats(id);
+  chRenderAgenda(id);
+}
+
+// ══════════════════════════════════════════════
+//  CHAIRMAN — helpers (all take id param)
+// ══════════════════════════════════════════════
+function nowHHMM(){const d=new Date();return`${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+
+function chFlatItems(id){
+  const data=chGetData(id);
+  const items=[];
+  data.topics.forEach((t,ti)=>{
+    const subs=t.subtopics||[];
+    if(subs.length===0){
+      items.push({type:'topic',topicIdx:ti,subIdx:null,label:t.name||`Topic ${ti+1}`,allocMins:parseFloat(t.allocMins)||0});
+    } else {
+      subs.forEach((s,si)=>{
+        items.push({type:'sub',topicIdx:ti,subIdx:si,label:(s.name||`Speaker ${si+1}`),allocMins:parseFloat(s.allocMins)||0});
+      });
+    }
+  });
+  return items;
+}
+
+function chTopicEffectiveMins(t){
+  const subs=t.subtopics||[];
+  if(subs.length>0) return subs.reduce((a,s)=>a+(parseFloat(s.allocMins)||0),0);
+  return parseFloat(t.allocMins)||0;
+}
+function chAllocatedMins(id){return chGetData(id).topics.reduce((acc,t)=>acc+chTopicEffectiveMins(t),0);}
+
+function chActualMins(item){
+  const start=(item.actualStart||'').trim();
+  const end=(item.actualEnd||'').trim();
+  if(!start||!end) return null;
+  const[sh,sm]=start.split(':').map(Number);
+  const[eh,em]=end.split(':').map(Number);
+  if([sh,sm,eh,em].some(isNaN)) return null;
+  return(eh*60+em)-(sh*60+sm);
+}
+function chVariance(item,effectiveMins){
+  const actual=chActualMins(item);
+  if(actual===null) return null;
+  const alloc=effectiveMins!==undefined?effectiveMins:(parseFloat(item.allocMins)||0);
+  return actual-alloc;
+}
+function chTopicActualMins(t){
+  const subs=t.subtopics||[];
+  if(subs.length===0) return chActualMins(t);
+  const starts=subs.map(s=>(s.actualStart||'').trim()).filter(Boolean);
+  const ends=subs.map(s=>(s.actualEnd||'').trim()).filter(Boolean);
+  if(!starts.length||!ends.length) return null;
+  const toMins=str=>{const[h,m]=str.split(':').map(Number);return h*60+m;};
+  return Math.max(...ends.map(toMins))-Math.min(...starts.map(toMins));
+}
+function chFmtMins(m){
+  if(m===null||m===undefined) return'—';
+  const abs=Math.abs(m);const h=Math.floor(abs/60),rm=Math.round(abs%60);
+  return h?`${m<0?'-':''}${h}h ${rm}m`:`${m<0?'-':''}${rm}m`;
+}
+const chSecsToHMS=s=>{const neg=s<0;const abs=Math.abs(Math.round(s));const h=Math.floor(abs/3600),m=Math.floor((abs%3600)/60),sec=abs%60;return(neg?'-':'')+(h?`${h}:${pad(m)}:${pad(sec)}`:`${pad(m)}:${pad(sec)}`);};
+
+function chTopicState(id,ti){
+  const rt=chGetRT(id);
+  if(!rt.running) return 'idle';
+  const t=chGetData(id).topics[ti];
+  const subs=t?t.subtopics||[]:[];
+  const items=chFlatItems(id);
+  if(subs.length===0){
+    const me=items.findIndex(it=>it.topicIdx===ti&&it.subIdx===null);
+    if(me===rt.currentIdx) return 'active';
+    if(me<rt.currentIdx) return 'done';
+    return 'idle';
+  }
+  const myIdxs=items.map((it,i)=>it.topicIdx===ti&&it.subIdx!==null?i:-1).filter(i=>i>=0);
+  if(!myIdxs.length) return 'idle';
+  if(myIdxs.some(i=>i===rt.currentIdx)) return 'active';
+  if(myIdxs.every(i=>i<rt.currentIdx)) return 'done';
+  if(myIdxs.some(i=>i<rt.currentIdx)) return 'active';
+  return 'idle';
+}
+function chSubState(id,ti,si){
+  const rt=chGetRT(id);
+  if(!rt.running) return 'idle';
+  const items=chFlatItems(id);
+  const me=items.findIndex(it=>it.topicIdx===ti&&it.subIdx===si);
+  if(me<0) return 'idle';
+  if(me===rt.currentIdx) return 'active';
+  if(me<rt.currentIdx) return 'done';
+  return 'idle';
+}
+
+function chItemFromIdx(id,idx){
+  const items=chFlatItems(id);
+  const it=items[idx];if(!it) return null;
+  if(it.subIdx===null) return chGetData(id).topics[it.topicIdx];
+  return chGetData(id).topics[it.topicIdx].subtopics[it.subIdx];
+}
+function chExpandItemTopic(id,idx){
+  const items=chFlatItems(id);
+  const it=items[idx];if(!it) return;
+  chGetData(id).topics[it.topicIdx]._expanded=true;
+}
+
+// ── Stats ──
+function chRenderStats(id){
+  const data=chGetData(id);
+  const total=parseFloat(data.totalMins)||60;
+  const allocated=chAllocatedMins(id);
+  const remaining=total-allocated;
+  const el=document.getElementById('ch-stats-'+id);if(!el) return;
+  el.innerHTML=`
+    <div class="ch-stat"><div class="ch-stat-label">Allocated</div><div class="ch-stat-val">${allocated.toFixed(0)}m</div></div>
+    <div class="ch-stat"><div class="ch-stat-label">Unallocated</div><div class="ch-stat-val ${remaining<0?'over':remaining<5?'warn':'ok'}">${remaining>=0?'+':''}${remaining.toFixed(0)}m</div></div>
+    <div class="ch-stat"><div class="ch-stat-label">Topics</div><div class="ch-stat-val">${data.topics.length}</div></div>`;
+}
+
+// ── Agenda ──
+function chAddTopic(id){
+  chGetData(id).topics.push({id:String(Date.now()),name:'',allocMins:5,subtopics:[],actualStart:'',actualEnd:''});
+  chSaveTab(id);chRenderAgenda(id);chRenderStats(id);
+}
+function chRemoveTopic(id,ti){
+  if(!confirm('Remove this topic?'))return;
+  chGetData(id).topics.splice(ti,1);chSaveTab(id);chRenderAgenda(id);chRenderStats(id);
+}
+function chAddSub(id,ti){
+  chGetData(id).topics[ti].subtopics.push({id:String(Date.now()),name:'',allocMins:2,actualStart:'',actualEnd:''});
+  chSaveTab(id);chRenderAgenda(id);chRenderStats(id);
+}
+function chRemoveSub(id,ti,si){
+  chGetData(id).topics[ti].subtopics.splice(si,1);chSaveTab(id);chRenderAgenda(id);chRenderStats(id);
+}
+function chToggleTopic(id,ti){
+  const data=chGetData(id);
+  data.topics[ti]._expanded=!data.topics[ti]._expanded;
+  chSaveTab(id);chRenderAgenda(id);
+}
+
+function chUpdateTopicAllocLabel(id,ti){
+  const t=chGetData(id).topics[ti];if(!t) return;
+  const el=document.querySelector(`#agenda-list-${id} .topic-block:nth-child(${ti+1}) .topic-alloc`);
+  if(el) el.textContent=chTopicEffectiveMins(t)+'m';
+}
+
+function chRenderAgenda(id){
+  const list=document.getElementById('agenda-list-'+id);
+  const empty=document.getElementById('ch-empty-'+id);
+  if(!list) return;
+  const data=chGetData(id);
+  list.innerHTML='';
+  if(!data.topics.length){if(empty) empty.style.display='';return;}
+  if(empty) empty.style.display='none';
+
+  data.topics.forEach((t,ti)=>{
+    const st=chTopicState(id,ti);
+    const hasSubs=(t.subtopics||[]).length>0;
+    const effectiveMins=chTopicEffectiveMins(t);
+    const items=chFlatItems(id);
+    const isCurrentTopic=chGetRT(id).running&&items[chGetRT(id).currentIdx]&&items[chGetRT(id).currentIdx].topicIdx===ti;
+
+    // Topic-level verdict badge (only when all subs done or topic done)
+    let verdictHtml='';
+    if(st==='done'){
+      const topicActual=hasSubs?chTopicActualMins(t):chActualMins(t);
+      if(topicActual!==null){
+        const v=topicActual-effectiveMins;
+        verdictHtml=`<span class="topic-verdict ${v>0?'var-over':v<0?'var-under':'var-ok'}">${v>0?`▲ +${chFmtMins(v)}`:v<0?`▼ ${chFmtMins(Math.abs(v))}`:'✓ on time'}</span>`;
+      }
+    }
+
+    const block=document.createElement('div');
+    block.className='topic-block'+(st==='active'?' topic-active':st==='done'?' topic-done':'');
+    block.innerHTML=`
+      <div class="topic-header" onclick="chToggleTopic('${id}',${ti})">
+        <span class="topic-num">${ti+1}.</span>
+        <input class="topic-name-input" type="text" placeholder="Topic name…" value="${escAttr(t.name)}"
+          onclick="event.stopPropagation()"
+          oninput="chGetData('${id}').topics[${ti}].name=this.value;chSaveTab('${id}');" maxlength="80"/>
+        <span class="topic-alloc">${effectiveMins}m</span>
+        ${verdictHtml}
+        <span class="topic-countdown tc-idle" id="cd-topic-${id}-${ti}">—</span>
+        <div class="topic-actions" onclick="event.stopPropagation()">
+          ${isCurrentTopic&&!hasSubs?`<button class="btn btn-sm btn-stop" onclick="chNextItem('${id}')" title="Next item"><i class="ti ti-arrow-right" aria-hidden="true"></i></button>`:''}
+          <button class="btn btn-sm btn-danger" onclick="chRemoveTopic('${id}',${ti})" title="Remove topic"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="topic-body" id="tbody-${id}-${ti}">
+        <div class="alloc-row">
+          ${hasSubs
+            ?`<span style="font-size:11px;color:var(--text3);font-family:var(--mono);">Allocated = sum of speakers below</span>`
+            :`<label>Allocated (min)</label>
+              <input class="min-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="${t.allocMins||0}"
+                onchange="chGetData('${id}').topics[${ti}].allocMins=parseFloat(this.value)||0;chSaveTab('${id}');chRenderStats('${id}');chUpdateTopicAllocLabel('${id}',${ti});"/>`
+          }
+          <button class="btn btn-sm btn-blue" onclick="chAddSub('${id}',${ti})" style="margin-left:auto;"><i class="ti ti-plus" aria-hidden="true"></i> Add Subtopic/Speaker</button>
+        </div>
+        ${!hasSubs?`
+        <div class="actual-row">
+          <label>Actual start</label>
+          <input class="time-input" type="time" value="${escAttr(t.actualStart||'')}"
+            oninput="chGetData('${id}').topics[${ti}].actualStart=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+          <label>end</label>
+          <input class="time-input" type="time" value="${escAttr(t.actualEnd||'')}"
+            oninput="chGetData('${id}').topics[${ti}].actualEnd=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+          <span id="var-topic-${id}-${ti}" class="variance-tag" style="display:none;"></span>
+        </div>`:''}
+        ${hasSubs?`<div id="var-topic-${id}-${ti}" class="variance-tag" style="display:none;margin:6px 0 4px;"></div>`:''}
+        <div class="subtopics" id="subs-${id}-${ti}">
+          ${(t.subtopics||[]).map((s,si)=>chSubHtml(id,ti,si,s)).join('')}
+        </div>
+      </div>`;
+
+    if(!t._expanded) block.querySelector(`#tbody-${id}-${ti}`).style.display='none';
+    list.appendChild(block);
+    chRenderTopicVariance(id,ti);
+  });
+  chRenderReport(id);
+}
+
+function chSubHtml(id,ti,si,s){
+  const st=chSubState(id,ti,si);
+  const items=chFlatItems(id);
+  const myIdx=items.findIndex(it=>it.topicIdx===ti&&it.subIdx===si);
+  const isActive=chGetRT(id).running&&myIdx===chGetRT(id).currentIdx;
+  return`
+  <div class="sub-row ${st==='active'?'sub-active':st==='done'?'sub-done':''}" id="sub-${id}-${ti}-${si}">
+    <input class="sub-name" type="text" placeholder="Speaker / subtopic name…" value="${escAttr(s.name)}"
+      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].name=this.value;chSaveTab('${id}');" maxlength="80"/>
+    <label style="font-size:10px;font-family:var(--mono);color:var(--text3);white-space:nowrap;">min</label>
+    <input class="sub-alloc" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="${s.allocMins||0}"
+      onchange="chGetData('${id}').topics[${ti}].subtopics[${si}].allocMins=parseFloat(this.value)||0;chSaveTab('${id}');chRenderStats('${id}');chUpdateTopicAllocLabel('${id}',${ti});chRenderTopicVariance('${id}',${ti});"/>
+    <span class="${st==='active'?'sub-countdown tc-run':'sub-countdown tc-idle'}" id="cd-sub-${id}-${ti}-${si}">—</span>
+    ${isActive?`<button class="btn btn-sm btn-stop" onclick="chNextItem('${id}')" title="Next speaker"><i class="ti ti-arrow-right" aria-hidden="true"></i></button>`:''}
+    <button class="btn btn-sm btn-danger" onclick="chRemoveSub('${id}',${ti},${si})" title="Remove"><i class="ti ti-trash" aria-hidden="true"></i></button>
+  </div>
+  <div class="actual-row" style="padding-left:12px;gap:6px;flex-wrap:wrap;">
+    <label>Start</label>
+    <input class="time-input" type="time" value="${escAttr(s.actualStart||'')}"
+      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].actualStart=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+    <label>End</label>
+    <input class="time-input" type="time" value="${escAttr(s.actualEnd||'')}"
+      oninput="chGetData('${id}').topics[${ti}].subtopics[${si}].actualEnd=this.value;chSaveTab('${id}');chRenderTopicVariance('${id}',${ti});"/>
+    <span id="var-sub-${id}-${ti}-${si}" class="variance-tag" style="display:none;"></span>
+  </div>`;
+}
+
+function chRenderTopicVariance(id,ti){
+  const data=chGetData(id);
+  const t=data.topics[ti];if(!t) return;
+  const el=document.getElementById(`var-topic-${id}-${ti}`);if(!el) return;
+  const hasSubs=(t.subtopics||[]).length>0;
+  if(hasSubs){
+    const actualMins=chTopicActualMins(t);
+    const allocMins=chTopicEffectiveMins(t);
+    if(actualMins===null){el.style.display='none';return;}
+    const v=actualMins-allocMins;
+    el.style.display='';
+    el.className=`variance-tag ${v>0?'var-over':v<0?'var-under':'var-ok'}`;
+    el.textContent=`Topic: ${actualMins}m of ${allocMins}m${v>0?` (+${chFmtMins(v)} over)`:v<0?` (${chFmtMins(Math.abs(v))} under)`:''}`;
+  } else {
+    const v=chVariance(t);
+    if(v===null){el.style.display='none';return;}
+    el.style.display='';
+    el.className=`variance-tag ${v>0?'var-over':v<0?'var-under':'var-ok'}`;
+    el.textContent=v>0?`+${chFmtMins(v)} over`:v<0?`${chFmtMins(Math.abs(v))} under`:'on time';
+  }
+  (t.subtopics||[]).forEach((s,si)=>{
+    const vel=document.getElementById(`var-sub-${id}-${ti}-${si}`);if(!vel) return;
+    const v=chVariance(s);
+    if(v===null){vel.style.display='none';return;}
+    vel.style.display='';
+    vel.className=`variance-tag ${v>0?'var-over':v<0?'var-under':'var-ok'}`;
+    vel.textContent=v>0?`+${chFmtMins(v)} over`:v<0?`${chFmtMins(Math.abs(v))} under`:'on time';
+  });
+}
+
+// ── Report ──
+function chRenderReport(id){
+  const section=document.getElementById('ch-report-section-'+id);
+  const tbody=document.getElementById('ch-report-tbody-'+id);
+  if(!section||!tbody) return;
+  const data=chGetData(id);
+  const hasActual=data.topics.some(t=>{
+    if(t.actualStart||t.actualEnd) return true;
+    return(t.subtopics||[]).some(s=>s.actualStart||s.actualEnd);
+  });
+  section.style.display=hasActual?'':'none';
+  if(!hasActual) return;
+
+  let totalAlloc=chAllocatedMins(id),totalActual=0,overCount=0,underCount=0;
+  const rows=[];
+  data.topics.forEach((t,ti)=>{
+    const subs=t.subtopics||[];
+    if(subs.length===0){
+      const a=chActualMins(t),v=chVariance(t);
+      if(a!==null){totalActual+=a;if(v>0)overCount++;else if(v<0)underCount++;}
+      rows.push({label:t.name||`Topic ${ti+1}`,alloc:chTopicEffectiveMins(t),item:t,isTopic:true,isSub:false,noTimes:false});
+    } else {
+      const topicActual=chTopicActualMins(t);
+      const topicAlloc=chTopicEffectiveMins(t);
+      const topicV=topicActual!==null?topicActual-topicAlloc:null;
+      if(topicActual!==null) totalActual+=topicActual;
+      rows.push({label:t.name||`Topic ${ti+1}`,alloc:topicAlloc,actualOverride:topicActual,varianceOverride:topicV,isTopic:true,isSub:false,noTimes:true});
+      subs.forEach((s,si)=>{
+        const v=chVariance(s);
+        if(chActualMins(s)!==null){if(v>0)overCount++;else if(v<0)underCount++;}
+        rows.push({label:s.name||`Speaker ${si+1}`,alloc:parseFloat(s.allocMins)||0,item:s,isTopic:false,isSub:true,noTimes:false});
+      });
+    }
+  });
+
+  const summaryEl=document.getElementById('ch-report-summary-'+id);
+  if(summaryEl) summaryEl.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px;background:var(--surface2);border-bottom:1px solid var(--border);">
+    <div class="ch-stat"><div class="ch-stat-label">Total allocated</div><div class="ch-stat-val">${totalAlloc.toFixed(0)}m</div></div>
+    <div class="ch-stat"><div class="ch-stat-label">Total used</div><div class="ch-stat-val ${totalActual>totalAlloc?'over':totalActual<totalAlloc?'warn':'ok'}">${totalActual.toFixed(0)}m</div></div>
+    <div class="ch-stat"><div class="ch-stat-label">Ran over</div><div class="ch-stat-val ${overCount>0?'over':'ok'}">${overCount}</div></div>
+    <div class="ch-stat"><div class="ch-stat-label">Ran under</div><div class="ch-stat-val">${underCount}</div></div>
+  </div>`;
+
+  tbody.innerHTML=rows.map(x=>{
+    let actual,v;
+    if(x.actualOverride!==undefined){actual=x.actualOverride;v=x.varianceOverride;}
+    else if(x.item){actual=chActualMins(x.item);v=chVariance(x.item);}
+    else{actual=null;v=null;}
+    const rowStyle=x.isTopic?'background:var(--surface2);':'';
+    const indentStyle=x.isSub?'padding-left:28px;color:var(--text2);':'';
+    const varStr=v===null?'<span style="color:var(--text3)">—</span>':
+      v>0?`<span class="r-over">▲ +${chFmtMins(v)} over</span>`:
+      v<0?`<span class="r-under">▼ ${chFmtMins(Math.abs(v))} under</span>`:
+      `<span class="r-ok">✓ on time</span>`;
+    const startStr=x.item?escHtml(x.item.actualStart||'—'):'—';
+    const endStr=x.item?escHtml(x.item.actualEnd||'—'):'—';
+    return`<tr style="${rowStyle}">
+      <td style="${indentStyle}">${x.isTopic?'<i class="ti ti-layout-list" style="font-size:11px;margin-right:5px;opacity:.5;" aria-hidden="true"></i>':'<i class="ti ti-user" style="font-size:11px;margin-right:5px;opacity:.4;" aria-hidden="true"></i>'}${escHtml(x.label)}</td>
+      <td><span class="dur-tag">${x.alloc}m</span></td>
+      <td class="ts-cell">${x.noTimes?'—':startStr}</td>
+      <td class="ts-cell">${x.noTimes?'—':endStr}</td>
+      <td class="ts-cell">${actual!==null?`${actual}m`:'—'}</td>
+      <td>${varStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Save report snapshot ──
+function chSaveReportSnapshot(id){
+  const data=chGetData(id);
+  const tabName=chTabs.find(t=>t.id===id)?.name||'Meeting';
+  const rows=[];
+  let totalAlloc=0,totalActual=0,overCount=0,underCount=0;
+  data.topics.forEach((t,ti)=>{
+    const subs=t.subtopics||[];
+    const topicAlloc=chTopicEffectiveMins(t);
+    totalAlloc+=topicAlloc;
+    if(subs.length===0){
+      const a=chActualMins(t),v=chVariance(t);
+      if(a!==null){totalActual+=a;if(v>0)overCount++;else if(v<0)underCount++;}
+      rows.push({label:t.name||`Topic ${ti+1}`,alloc:topicAlloc,actual:a,variance:v,isTopic:true});
+    } else {
+      const topicActual=chTopicActualMins(t);
+      const topicV=topicActual!==null?topicActual-topicAlloc:null;
+      if(topicActual!==null) totalActual+=topicActual;
+      rows.push({label:t.name||`Topic ${ti+1}`,alloc:topicAlloc,actual:topicActual,variance:topicV,isTopic:true});
+      subs.forEach((s,si)=>{
+        const a=chActualMins(s),v=chVariance(s);
+        if(a!==null){if(v>0)overCount++;else if(v<0)underCount++;}
+        rows.push({label:s.name||`Speaker ${si+1}`,alloc:parseFloat(s.allocMins)||0,actual:a,variance:v,isTopic:false});
+      });
+    }
+  });
+  const hasData=rows.some(r=>r.actual!==null);
+  if(!hasData) return;
+  const report={
+    id:'rep_'+Date.now(),
+    tabId:id,
+    tabName,
+    meetingName:data.name||'Untitled meeting',
+    date:new Date().toISOString(),
+    totalAlloc,totalActual,overCount,underCount,
+    rows
+  };
+  savedReports.unshift(report);
+  if(savedReports.length>20) savedReports=savedReports.slice(0,20);
+  saveReports();
+}
+
+// ── Run mode ──
+function chStartMeeting(id){
+  const rt=chGetRT(id);
+  if(rt.running){chStop(id);return;}
+  const items=chFlatItems(id);
+  if(!items.length){alert('Add at least one topic first.');return;}
+  rt.running=true;
+  rt.meetingStartTs=Date.now();
+  rt.currentIdx=0;
+  rt.itemStartTs=Date.now();
+  const firstItem=chItemFromIdx(id,0);
+  if(firstItem&&!firstItem.actualStart) firstItem.actualStart=nowHHMM();
+  chExpandItemTopic(id,0);
+  chSaveTab(id);
+  const startBtn=document.getElementById('ch-start-btn-'+id);
+  if(startBtn) startBtn.innerHTML='<i class="ti ti-player-stop" aria-hidden="true"></i> Stop meeting';
+  const rb=document.getElementById('rb-'+id);
+  if(rb) rb.classList.add('show');
+  chRenderAgenda(id);
+  chTickMeeting(id);
+  chTickItem(id);
+}
+
+function chStop(id){
+  const rt=chGetRT(id);
+  if(rt.running&&rt.currentIdx>=0){
+    const cur=chItemFromIdx(id,rt.currentIdx);
+    if(cur&&!cur.actualEnd){cur.actualEnd=nowHHMM();chSaveTab(id);}
+  }
+  const wasRunning=rt.running;
+  rt.running=false;
+  rt.currentIdx=-1;
+  clearInterval(rt.meetingTimer);clearInterval(rt.itemTimer);
+  rt.meetingTimer=null;rt.itemTimer=null;
+  const startBtn=document.getElementById('ch-start-btn-'+id);
+  if(startBtn) startBtn.innerHTML='<i class="ti ti-player-play" aria-hidden="true"></i> Start meeting';
+  const rb=document.getElementById('rb-'+id);
+  if(rb) rb.classList.remove('show');
+  ['ch-big-clock-','ch-progress-label-','ch-status-badge-'].forEach(prefix=>{
+    const el=document.getElementById(prefix+id);
+    if(!el) return;
+    if(prefix==='ch-big-clock-'){el.textContent='—';el.className='ch-big-clock';}
+    else if(prefix==='ch-status-badge-') el.style.display='none';
+    else el.textContent='';
+  });
+  const pb=document.getElementById('ch-progress-bar-'+id);
+  if(pb) pb.style.width='0%';
+  chRenderAgenda(id);
+  if(wasRunning){
+    chSaveReportSnapshot(id);
+    setTimeout(()=>{
+      const rep=document.getElementById('ch-report-section-'+id);
+      if(rep&&rep.style.display!=='none') rep.scrollIntoView({behavior:'smooth',block:'start'});
+    },200);
+  }
+}
+
+function chResetPrompt(id){
+  // Show inline choice — times only vs full reset
+  const existing=document.getElementById('ch-reset-choice-'+id);
+  if(existing){existing.remove();return;}
+  const btn=document.querySelector(`#tab-ch-${id} #ch-start-btn-${id}`)?.parentElement;
+  const div=document.createElement('div');
+  div.id='ch-reset-choice-'+id;
+  div.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px 12px;background:var(--red-l);border:1px solid var(--red);border-radius:var(--r);';
+  div.innerHTML=`<span style="font-size:12px;color:var(--red);font-family:var(--mono);flex:1;">Reset:</span>
+    <button class="btn btn-sm" onclick="chResetMeeting('${id}','times');document.getElementById('ch-reset-choice-${id}').remove();">
+      <i class="ti ti-clock" aria-hidden="true"></i> Clear times only
+    </button>
+    <button class="btn btn-sm btn-danger" onclick="chResetMeeting('${id}','full');document.getElementById('ch-reset-choice-${id}').remove();">
+      <i class="ti ti-trash" aria-hidden="true"></i> Full reset (erase topics too)
+    </button>
+    <button class="btn btn-sm" onclick="document.getElementById('ch-reset-choice-${id}').remove()"><i class="ti ti-x" aria-hidden="true"></i></button>`;
+  // Insert after the controls row
+  const top=document.querySelector('#tab-ch-'+id+' .ch-top');
+  if(top) top.appendChild(div);
+}
+
+function chResetMeeting(id, mode='times'){
+  if(chGetRT(id).running) chStop(id);
+  const data=chGetData(id);
+  if(mode==='full'){
+    if(!confirm('This will erase all topics and speakers. Are you sure?')) return;
+    data.topics=[];
+  } else {
+    // times only — clear actual start/end but keep topics and subtopics
+    data.topics.forEach(t=>{
+      t.actualStart='';t.actualEnd='';
+      (t.subtopics||[]).forEach(s=>{s.actualStart='';s.actualEnd='';});
+    });
+  }
+  chSaveTab(id);
+  const el=document.getElementById('ch-big-clock-'+id);if(el){el.textContent='—';el.className='ch-big-clock';}
+  const pb=document.getElementById('ch-progress-bar-'+id);if(pb) pb.style.width='0%';
+  const pl=document.getElementById('ch-progress-label-'+id);if(pl) pl.textContent='';
+  const sb=document.getElementById('ch-status-badge-'+id);if(sb) sb.style.display='none';
+  // Hide report section
+  const rep=document.getElementById('ch-report-section-'+id);if(rep) rep.style.display='none';
+  chRenderAgenda(id);chRenderStats(id);
+}
+
+function chNextItem(id){
+  const rt=chGetRT(id);
+  const items=chFlatItems(id);
+  const now=nowHHMM();
+  if(rt.currentIdx>=0){
+    const cur=chItemFromIdx(id,rt.currentIdx);
+    if(cur&&!cur.actualEnd){cur.actualEnd=now;chSaveTab(id);}
+  }
+  if(rt.currentIdx<items.length-1){
+    rt.currentIdx++;
+    rt.itemStartTs=Date.now();
+    clearInterval(rt.itemTimer);
+    const next=chItemFromIdx(id,rt.currentIdx);
+    if(next&&!next.actualStart){next.actualStart=now;chSaveTab(id);}
+    chExpandItemTopic(id,rt.currentIdx);
+    chTickItem(id);
+    chRenderAgenda(id);
+    const it=items[rt.currentIdx];
+    const rbcur=document.getElementById('rb-current-'+id);
+    if(rbcur&&it) rbcur.textContent=it.label;
+  } else {
+    chStop(id);
+  }
+}
+
+function chTickMeeting(id){
+  const rt=chGetRT(id);
+  rt.meetingTimer=setInterval(()=>{
+    if(!rt.running) return;
+    const data=chGetData(id);
+    const elapsed=(Date.now()-rt.meetingStartTs)/1000;
+    const totalSecs=(data.totalMins||60)*60;
+    const remaining=totalSecs-elapsed;
+    const cl=document.getElementById('ch-big-clock-'+id);
+    if(cl){cl.textContent=chSecsToHMS(remaining);cl.className='ch-big-clock'+(remaining<0?' over':remaining<300?' warn':' running');}
+    const pct=Math.min(100,Math.round((elapsed/totalSecs)*100));
+    const pb=document.getElementById('ch-progress-bar-'+id);
+    if(pb){pb.style.width=pct+'%';pb.style.background=remaining<0?'var(--red)':remaining<300?'var(--orange)':'var(--accent)';}
+    const pl=document.getElementById('ch-progress-label-'+id);
+    if(pl) pl.textContent=`${chSecsToHMS(-elapsed)} elapsed · ${chSecsToHMS(remaining)} remaining`;
+    // Pacing badge
+    const items=chFlatItems(id);
+    const completedSecs=items.slice(0,rt.currentIdx).reduce((a,it)=>a+(it.allocMins||0)*60,0);
+    const curItemElapsed=(Date.now()-rt.itemStartTs)/1000;
+    const curItemAlloc=(items[rt.currentIdx]?items[rt.currentIdx].allocMins||0:0)*60;
+    const scheduleElapsed=completedSecs+Math.min(curItemElapsed,curItemAlloc);
+    const diff=elapsed-scheduleElapsed;
+    const badge=document.getElementById('ch-status-badge-'+id);
+    if(badge){
+      badge.style.display='';
+      const diffMins=(Math.abs(diff)/60).toFixed(1);
+      if(diff>30){badge.className='variance-tag var-over';badge.innerHTML=`<i class="ti ti-trending-up" aria-hidden="true"></i> Running <strong>over</strong> by ~${diffMins}m`;}
+      else if(diff<-30){badge.className='variance-tag var-under';badge.innerHTML=`<i class="ti ti-trending-down" aria-hidden="true"></i> Running <strong>under</strong> by ~${diffMins}m`;}
+      else{badge.className='variance-tag var-ok';badge.innerHTML=`<i class="ti ti-check" aria-hidden="true"></i> <strong>On time</strong>`;}
+    }
+  },500);
+}
+
+function chTickItem(id){
+  const rt=chGetRT(id);
+  const items=chFlatItems(id);
+  const it=items[rt.currentIdx];
+  if(!it) return;
+  const rbcur=document.getElementById('rb-current-'+id);
+  if(rbcur) rbcur.textContent=it.label;
+  rt.itemTimer=setInterval(()=>{
+    if(!rt.running) return;
+    const elapsed=(Date.now()-rt.itemStartTs)/1000;
+    const allocSecs=(it.allocMins||0)*60;
+    const remaining=allocSecs-elapsed;
+    const cdId=it.subIdx===null?`cd-topic-${id}-${it.topicIdx}`:`cd-sub-${id}-${it.topicIdx}-${it.subIdx}`;
+    const el=document.getElementById(cdId);
+    if(el){
+      el.textContent=chSecsToHMS(remaining);
+      if(it.subIdx===null){
+        el.className='topic-countdown'+(remaining<0?' tc-over':remaining<60?' tc-warn':' tc-run');
+      } else {
+        el.className='sub-countdown'+(remaining<0?' sub-over':remaining<60?' tc-warn':' tc-run');
+      }
+    }
+    if(it.subIdx!==null){
+      const data=chGetData(id);
+      const subs=data.topics[it.topicIdx]?data.topics[it.topicIdx].subtopics||[]:[];
+      let topicRemaining=remaining;
+      subs.forEach((s,si)=>{if(si>it.subIdx) topicRemaining+=(parseFloat(s.allocMins)||0)*60;});
+      const topicEl=document.getElementById(`cd-topic-${id}-${it.topicIdx}`);
+      if(topicEl){
+        topicEl.textContent=chSecsToHMS(topicRemaining);
+        topicEl.className='topic-countdown'+(topicRemaining<0?' tc-over':topicRemaining<60?' tc-warn':' tc-run');
+      }
+    }
+  },500);
+}
+
+// ── User name ──
+function saveUserName(val){
+  appSettings.userName=val.trim();
+  saveAppSettings();
+}
+function getUserName(){return appSettings.userName||'';}
+
+// ── Backup / Restore ──
+function backupData(){
+  const payload={
+    version:1,
+    exported:new Date().toISOString(),
+    timelog:localStorage.getItem('timelog_v3'),
+    chTabs:localStorage.getItem('ch_tabs_v1'),
+    reports:localStorage.getItem('meeting_reports_v1'),
+    settings:localStorage.getItem('app_settings_v1'),
+    tutorial:localStorage.getItem('tutorial_done_v1')
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const ts=new Date().toISOString().slice(0,10);
+  a.href=url;a.download=`timelog-backup-${ts}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function restoreData(input){
+  const file=input.files[0];if(!file) return;
+  if(!confirm('This will overwrite ALL your current data with the backup. Continue?')){input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const payload=JSON.parse(e.target.result);
+      if(payload.timelog) localStorage.setItem('timelog_v3',payload.timelog);
+      if(payload.chTabs) localStorage.setItem('ch_tabs_v1',payload.chTabs);
+      if(payload.reports) localStorage.setItem('meeting_reports_v1',payload.reports);
+      if(payload.settings) localStorage.setItem('app_settings_v1',payload.settings);
+      if(payload.tutorial) localStorage.setItem('tutorial_done_v1',payload.tutorial);
+      alert('Backup restored. The app will now reload.');
+      location.reload();
+    }catch(err){
+      alert('Invalid backup file. Please use a file exported from this app.');
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ── Voice Tutorial ──
+const TUT_VOICE_KEY='tut_voice_v1';
+let tutVoiceMode=(()=>{try{return localStorage.getItem(TUT_VOICE_KEY)||'read';}catch(e){return'read';}})();
+function toggleTutorialMode(){
+  tutVoiceMode=tutVoiceMode==='voice'?'read':'voice';
+  localStorage.setItem(TUT_VOICE_KEY,tutVoiceMode);
+  updateTutModeBtn();
+  // Stop any current speech if switching away from voice
+  if(tutVoiceMode==='read'&&window.speechSynthesis) window.speechSynthesis.cancel();
+}
+function updateTutModeBtn(){
+  const btn=document.getElementById('tut-mode-btn');
+  if(!btn) return;
+  if(tutVoiceMode==='voice'){
+    btn.innerHTML='<i class="ti ti-microphone" aria-hidden="true"></i> Voice narration ON';
+    btn.style.background='var(--accent-l)';btn.style.borderColor='var(--accent)';btn.style.color='var(--accent-t)';
+  } else {
+    btn.innerHTML='<i class="ti ti-book" aria-hidden="true"></i> Read mode ON';
+    btn.style.background='';btn.style.borderColor='';btn.style.color='';
+  }
+}
+function tutSpeak(text){
+  if(tutVoiceMode!=='voice'||!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.rate=0.95;utt.pitch=1;
+  window.speechSynthesis.speak(utt);
+}
+function tutStopSpeech(){
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+
+function openSettings(){
+  document.getElementById('settings-overlay').classList.add('open');
+  const n=appSettings.coreNames;
+  document.getElementById('rename-tracker').value=n.tracker||'Tracker';
+  document.getElementById('rename-dashboard').value=n.dashboard||'Dashboard';
+  document.getElementById('rename-chairman').value=n.chairman||'Agenda';
+  document.getElementById('user-name-input').value=appSettings.userName||'';
+  updateTutModeBtn();
+  populateSettingsCHTabs();
+  populateReportsList();
+}
+function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
+function settingsOverlayClick(e){if(e.target===document.getElementById('settings-overlay')) closeSettings();}
+
+function populateSettingsCHTabs(){
+  const list=document.getElementById('ch-tabs-settings-list');
+  const limitNote=document.getElementById('ch-tab-limit-note');
+  const addBtn=document.getElementById('add-ch-tab-btn');
+  const extraTabs=chTabs.length-1; // first is the "default" chairman tab
+  list.innerHTML=chTabs.map((t,i)=>`
+    <div class="ch-tab-row">
+      <input type="text" value="${escAttr(t.name)}" placeholder="Tab name" maxlength="20"
+        onchange="renameChairmanTab('${t.id}',this.value);populateSettingsCHTabs();" />
+      ${i>0?`<button class="btn btn-sm btn-danger" onclick="removeChairmanTab('${t.id}');populateSettingsCHTabs();" title="Delete"><i class="ti ti-trash" aria-hidden="true"></i></button>`:'<span style="font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap;">default</span>'}
+    </div>`).join('');
+  const remaining=MAX_EXTRA_CH_TABS-(chTabs.length-1);
+  limitNote.textContent=remaining>0?`You can add ${remaining} more tab${remaining!==1?'s':''}`:'Maximum tabs reached (6 extra)';
+  addBtn.style.display=remaining>0?'':'none';
+}
+
+function populateReportsList(){
+  const list=document.getElementById('reports-list');
+  const empty=document.getElementById('reports-empty');
+  if(!savedReports.length){list.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+  list.innerHTML=savedReports.map((r,ri)=>{
+    const date=new Date(r.date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const overallV=r.totalActual-r.totalAlloc;
+    const verdictClass=overallV>0?'r-over':overallV<0?'r-under':'r-ok';
+    const verdictStr=overallV>0?`▲ +${chFmtMins(overallV)} over`:overallV<0?`▼ ${chFmtMins(Math.abs(overallV))} under`:'✓ on time';
+    const rowsHtml=r.rows.map(x=>{
+      const varStr=x.variance===null?'—':x.variance>0?`<span class="r-over">+${chFmtMins(x.variance)}</span>`:x.variance<0?`<span class="r-under">${chFmtMins(x.variance)}</span>`:'<span class="r-ok">✓</span>';
+      return`<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;${x.isTopic?'font-weight:bold;background:var(--surface2);padding:4px 6px;':'padding-left:16px;'}">
+        <span style="flex:1;">${escHtml(x.label)}</span>
+        <span style="font-family:var(--mono);color:var(--text3);">${x.alloc}m</span>
+        <span style="font-family:var(--mono);">${x.actual!==null?`${x.actual}m`:'—'}</span>
+        <span style="font-family:var(--mono);min-width:60px;text-align:right;">${varStr}</span>
+      </div>`;
+    }).join('');
+    return`<div class="report-card">
+      <div class="report-card-header" onclick="this.nextElementSibling.classList.toggle('open')">
+        <div style="flex:1;">
+          <div style="font-size:13px;">${escHtml(r.meetingName)}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">${escHtml(r.tabName)} · ${date}</div>
+        </div>
+        <span class="variance-tag ${overallV>0?'var-over':overallV<0?'var-under':'var-ok'}" style="margin-left:8px;">${verdictStr}</span>
+        <i class="ti ti-chevron-down" style="margin-left:8px;color:var(--text3);" aria-hidden="true"></i>
+      </div>
+      <div class="report-card-body">
+        <div class="report-meta">${r.totalAlloc}m allocated · ${r.totalActual}m used · ${r.overCount} over · ${r.underCount} under</div>
+        <div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px;">
+          <div style="display:flex;gap:8px;padding:4px 6px;background:var(--surface2);font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--text3);">
+            <span style="flex:1;">Item</span><span>Alloc</span><span>Used</span><span style="min-width:60px;text-align:right;">Variance</span>
+          </div>
+          ${rowsHtml}
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="deleteReport('${r.id}')"><i class="ti ti-trash" aria-hidden="true"></i> Delete report</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteReport(rid){
+  if(!confirm('Delete this report?')) return;
+  savedReports=savedReports.filter(r=>r.id!==rid);
+  saveReports();
+  populateReportsList();
+}
+
+// ══════════════════════════════════════════════
+//  TRACKER + DASHBOARD
+// ══════════════════════════════════════════════
+const KEY='timelog_v3';
+let state=(()=>{try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return{activities:['Work','Meeting','Break','Exercise','Study','Personal'],entries:[]};})();
+let selectedActivity=null,editingId=null,weekOffset=0,dashDay=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(state));}
+const pad=n=>String(n).padStart(2,'0');
+function dateKey(ts){const d=new Date(ts);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function toInput(ts){const d=new Date(ts);return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+function fmtTime(ts){return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+function fmtDur(ms){if(!ms||ms<=0)return'—';const m=Math.round(ms/60000);if(m<1)return'<1m';if(m<60)return`${m}m`;const h=Math.floor(m/60),rm=m%60;return rm?`${h}h ${rm}m`:`${h}h`;}
+function getMondayOf(date){const d=new Date(date);const day=d.getDay();const diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);d.setHours(0,0,0,0);return d;}
+function getWeekDays(offset){const mon=getMondayOf(new Date());mon.setDate(mon.getDate()+offset*7);return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(d.getDate()+i);return d;});}
+function calcSessions(entries){const byAct={};[...entries].sort((a,b)=>a.ts-b.ts).forEach(e=>{(byAct[e.activity]=byAct[e.activity]||[]).push(e);});const sessions=[];Object.entries(byAct).forEach(([act,evts])=>{let i=0;while(i<evts.length){if(evts[i].type==='start'){const start=evts[i];if(i+1<evts.length&&evts[i+1].type==='stop'){sessions.push({activity:act,startTs:start.ts,stopTs:evts[i+1].ts,durationMs:evts[i+1].ts-start.ts});i+=2;}else{sessions.push({activity:act,startTs:start.ts,stopTs:null,durationMs:null});i++;}}else{i++;}}});return sessions;}
+function totalsForDate(dateStr){const totals={};calcSessions(state.entries).forEach(s=>{if(!s.stopTs)return;if(!dateStr||dateKey(s.startTs)===dateStr){totals[s.activity]=(totals[s.activity]||0)+s.durationMs;}});return totals;}
+function totalMsForDate(dateStr){return Object.values(totalsForDate(dateStr)).reduce((a,b)=>a+b,0);}
+function isRunning(act){const evts=state.entries.filter(e=>e.activity===act).sort((a,b)=>b.ts-a.ts);return evts.length>0&&evts[0].type==='start';}
+function runningActivity(){const byAct={};state.entries.forEach(e=>{if(!byAct[e.activity]||e.ts>byAct[e.activity].ts)byAct[e.activity]=e;});for(const[act,last]of Object.entries(byAct)){if(last.type==='start')return act;}return null;}
+function sessionDurForStop(entry){if(entry.type!=='stop')return null;const starts=state.entries.filter(e=>e.activity===entry.activity&&e.type==='start'&&e.ts<entry.ts).sort((a,b)=>b.ts-a.ts);if(!starts.length)return null;return entry.ts-starts[0].ts;}
+function renderActivities(){const list=document.getElementById('act-list');list.innerHTML='';state.activities.forEach(a=>{const running=isRunning(a);const chip=document.createElement('div');chip.className='act-chip'+(running?' running':(selectedActivity===a?' sel':''));chip.innerHTML=`${running?'<span class="chip-dot"></span>':''}<span class="chip-name">${escHtml(a)}</span><button class="chip-rm" onclick="removeActivity(event,'${escAttr(a)}')" aria-label="Remove ${escAttr(a)}"><i class="ti ti-x" aria-hidden="true"></i></button>`;chip.addEventListener('click',()=>selectActivity(a));list.appendChild(chip);});updateLogBtn();}
+function selectActivity(a){selectedActivity=a;document.getElementById('sel-display').innerHTML=`<span class="sel-badge"><i class="ti ti-check" aria-hidden="true"></i> ${escHtml(a)}</span>`;renderActivities();}
+function updateLogBtn(){const wrap=document.getElementById('log-btn-wrap');const banner=document.getElementById('banner');if(!selectedActivity){wrap.innerHTML='';banner.className='banner';return;}const running=isRunning(selectedActivity);const globalRunning=runningActivity();if(running){banner.className='banner show';banner.innerHTML=`<i class="ti ti-player-play" aria-hidden="true"></i> <strong>${escHtml(selectedActivity)}</strong> is running…`;wrap.innerHTML=`<button class="btn btn-stop" style="width:100%;justify-content:center;" onclick="logEntry()"><i class="ti ti-player-stop" aria-hidden="true"></i> Stop ${escHtml(selectedActivity)}</button>`;}else{if(globalRunning&&globalRunning!==selectedActivity){banner.className='banner show';banner.innerHTML=`<i class="ti ti-alert-triangle" aria-hidden="true"></i> <strong>${escHtml(globalRunning)}</strong> is still running.`;}else{banner.className='banner';}wrap.innerHTML=`<button class="btn btn-accent" style="width:100%;justify-content:center;" onclick="logEntry()"><i class="ti ti-player-play" aria-hidden="true"></i> Start ${escHtml(selectedActivity)}</button>`;}}
+function addActivity(){const input=document.getElementById('new-act-input');const val=input.value.trim();if(!val||state.activities.includes(val)){input.focus();return;}state.activities.push(val);save();input.value='';renderActivities();updateFilterOptions();}
+function removeActivity(e,a){e.stopPropagation();if(!confirm(`Remove "${a}"?`))return;state.activities=state.activities.filter(x=>x!==a);if(selectedActivity===a){selectedActivity=null;document.getElementById('sel-display').innerHTML='<span class="no-sel">Select an activity →</span>';document.getElementById('banner').className='banner';document.getElementById('log-btn-wrap').innerHTML='';}save();renderActivities();updateFilterOptions();}
+function logEntry(){if(!selectedActivity)return;const ov=document.getElementById('override-time').value;const ts=ov?new Date(ov).getTime():Date.now();const note=document.getElementById('quick-note').value.trim();const type=isRunning(selectedActivity)?'stop':'start';state.entries.push({id:String(Date.now())+String(Math.random()),activity:selectedActivity,ts,type,note});save();document.getElementById('override-time').value='';document.getElementById('quick-note').value='';renderActivities();renderTable();updateFilterOptions();}
+function renderTable(){const fAct=document.getElementById('filter-act').value;const fDate=document.getElementById('filter-date').value;let entries=[...state.entries].sort((a,b)=>b.ts-a.ts);if(fAct)entries=entries.filter(e=>e.activity===fAct);if(fDate)entries=entries.filter(e=>dateKey(e.ts)===fDate);const tbody=document.getElementById('log-tbody');const empty=document.getElementById('empty-state');tbody.innerHTML='';if(!entries.length){empty.style.display='';document.getElementById('sum-bar').innerHTML='';return;}empty.style.display='none';entries.forEach(entry=>{const dur=sessionDurForStop(entry);const tr=document.createElement('tr');tr.innerHTML=`<td><span class="act-tag">${escHtml(entry.activity)}</span></td><td><span class="type-tag ${entry.type==='start'?'t-start':'t-stop'}">${entry.type}</span></td><td class="ts-cell">${fmtTime(entry.ts)}</td><td>${dur!=null?`<span class="dur-tag">${fmtDur(dur)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td><td class="note-cell" title="${escAttr(entry.note||'')}">${escHtml(entry.note||'')}</td><td class="ac"><button class="btn btn-sm" onclick="openEdit('${escAttr(entry.id)}')" title="Edit"><i class="ti ti-edit" aria-hidden="true"></i></button><button class="btn btn-sm btn-danger" onclick="deleteEntry('${escAttr(entry.id)}')" title="Delete"><i class="ti ti-trash" aria-hidden="true"></i></button></td>`;tbody.appendChild(tr);});renderSummary();}
+function renderSummary(){const bar=document.getElementById('sum-bar');const totals=totalsForDate(null);const total=Object.values(totals).reduce((a,b)=>a+b,0);if(!total){bar.innerHTML='';return;}const parts=Object.entries(totals).map(([a,v])=>`<span class="sc"><strong>${escHtml(a)}</strong> ${fmtDur(v)}</span>`).join('');bar.innerHTML=`<span class="sc" style="color:var(--text3);">All-time:</span>${parts}`;}
+function deleteEntry(id){if(!confirm('Delete this entry?'))return;state.entries=state.entries.filter(e=>e.id!==id);save();renderTable();renderActivities();}
+function clearAll(){if(!confirm('Clear all log entries?'))return;state.entries=[];save();renderTable();renderActivities();}
+function clearFilters(){document.getElementById('filter-act').value='';document.getElementById('filter-date').value='';renderTable();}
+function updateFilterOptions(){const sel=document.getElementById('filter-act');const cur=sel.value;const acts=[...new Set([...state.activities,...state.entries.map(e=>e.activity)])];sel.innerHTML='<option value="">All activities</option>'+acts.map(a=>`<option value="${escAttr(a)}"${a===cur?' selected':''}>${escHtml(a)}</option>`).join('');}
+function openEdit(id){editingId=id;const entry=state.entries.find(e=>e.id===id);if(!entry)return;const sel=document.getElementById('edit-act');const allActs=[...new Set([...state.activities,entry.activity])];sel.innerHTML=allActs.map(a=>`<option value="${escAttr(a)}"${a===entry.activity?' selected':''}>${escHtml(a)}</option>`).join('');document.getElementById('edit-type').value=entry.type||'start';document.getElementById('edit-time').value=toInput(entry.ts);document.getElementById('edit-note').value=entry.note||'';document.getElementById('edit-modal').classList.add('open');}
+function closeModal(e){if(e&&e.target!==document.getElementById('edit-modal'))return;document.getElementById('edit-modal').classList.remove('open');editingId=null;}
+function saveEdit(){const entry=state.entries.find(e=>e.id===editingId);if(!entry)return;entry.activity=document.getElementById('edit-act').value;entry.type=document.getElementById('edit-type').value;entry.ts=new Date(document.getElementById('edit-time').value).getTime();entry.note=document.getElementById('edit-note').value.trim();save();document.getElementById('edit-modal').classList.remove('open');editingId=null;renderTable();renderActivities();}
+function renderDash(){const days=getWeekDays(weekOffset);const todayKey=dateKey(Date.now());const weekKeys=days.map(d=>dateKey(d.getTime()));const fmt=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});document.getElementById('week-label').textContent=`${fmt(days[0])} – ${fmt(days[6])}`;if(!dashDay||!weekKeys.includes(dashDay))dashDay=weekKeys.includes(todayKey)?todayKey:weekKeys[0];const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];const grid=document.getElementById('day-grid');grid.innerHTML='';days.forEach((d,i)=>{const dk=dateKey(d.getTime());const total=totalMsForDate(dk);const card=document.createElement('div');const isSel=dk===dashDay,isToday=dk===todayKey;card.className='day-card'+(isToday?' today':'')+(isSel?' dash-sel':'');card.innerHTML=`<div class="day-name">${dayNames[i]}</div><div class="day-total">${total>0?fmtDur(total):'—'}</div><div class="day-date">${d.getDate()}</div>`;card.addEventListener('click',()=>{dashDay=dk;renderDash();});grid.appendChild(card);});const allActs=[...new Set([...state.activities,...state.entries.map(e=>e.activity)])];const dayTotals=totalsForDate(dashDay);const weekTotals={};allActs.forEach(a=>{weekTotals[a]=0;weekKeys.forEach(dk=>{weekTotals[a]+=(totalsForDate(dk)[a]||0);});});const maxDay=Math.max(1,...Object.values(dayTotals));const selDay=days[weekKeys.indexOf(dashDay)];const selLabel=selDay?selDay.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}):'';document.getElementById('breakdown-title').textContent=`Activity totals — ${selLabel} vs this week`;const bd=document.getElementById('act-breakdown');if(!allActs.length){bd.innerHTML='<div style="padding:18px;color:var(--text3);font-size:13px;text-align:center;">No activities yet.</div>';return;}bd.innerHTML=`<div class="bd-head"><span style="flex:0 0 120px;">Activity</span><span style="flex:1;">Day (bar)</span><span style="flex:0 0 58px;text-align:right;">Day</span><span style="flex:0 0 58px;text-align:right;">Week</span></div>`+allActs.map(a=>{const dayMs=dayTotals[a]||0;const weekMs=weekTotals[a]||0;const pct=Math.round((dayMs/maxDay)*100);return`<div class="act-row"><div class="ar-name">${escHtml(a)}</div><div class="ar-bar"><div class="ar-fill" style="width:${pct}%"></div></div><div class="ar-day">${dayMs>0?fmtDur(dayMs):'—'}</div><div class="ar-week">${weekMs>0?fmtDur(weekMs):'—'}</div></div>`;}).join('');renderDashAnalytics();}
+
+// ══════════════════════════════════════════════
+//  SPOTLIGHT TUTORIAL
+// ══════════════════════════════════════════════
+const TUT_KEY='tutorial_done_v1';
+function getTutSteps(){
+  const name=getUserName();
+  const hi=name?`Hi ${name}! `:'';
+  const agendaName=appSettings.coreNames.chairman||'Agenda';
+  return[
+    {target:null,title:`${hi}Welcome to Time Log!`,body:`This quick tour shows you the key features. You can skip at any time, or replay it from Settings → Help. Choose between reading along or having it narrated to you — set your preference in Settings → Help → Tutorial mode.`},
+    {target:'tab-bar',title:'Tab bar',body:`Swipe the tabs to navigate. Tracker logs your work sessions. Dashboard shows your weekly breakdown. ${agendaName} runs your meetings. Tap the ⚙ gear icon for settings and more.`},
+    {target:'tab-tracker',title:'Tracker — log your time',body:'Select an activity from the left panel, then tap Start. Tap again to Stop. The session duration is calculated automatically. Use the Override Time field to backfill a time you forgot to log.'},
+    {target:'act-list',title:'Activities',body:'These are your activity categories. Click any to select it. Type a name in the input at the bottom and press + to add your own. Tap × on any chip to remove it.'},
+    {target:'tab-dashboard',title:'Dashboard',body:'See your tracked time for each day of the week. Click a day card to inspect activity totals. Scroll down for meeting patterns and activity averages built from your history.'},
+    {target:'chairman-tabs-container',title:`${agendaName} — run meetings`,body:`Add topics and subtopics/speakers with allocated minutes. The app auto-stamps start and end times as you tap Next. At the end you get a full variance report showing who ran over and by how much.`},
+    {target:'tabbar-actions',title:'Settings & Help',body:`Tap the ⚙ gear to rename tabs, add up to 6 ${agendaName} tabs, view saved reports, backup and restore your data, switch tutorial mode, or open the FAQ.`}
+  ];
+}
+
+let tutStep=0;
+let tutActive=false;
+
+function startTutorial(){
+  tutStep=0;tutActive=true;
+  document.getElementById('tut-overlay').classList.add('open');
+  showTab('tracker');
+  setTimeout(()=>renderTutStep(),120);
+}
+function skipTutorial(){
+  tutStopSpeech();
+  document.getElementById('tut-overlay').classList.remove('open');
+  tutActive=false;
+  localStorage.setItem(TUT_KEY,'1');
+}
+function tutNext(){
+  tutStep++;
+  const steps=getTutSteps();
+  if(tutStep>=steps.length){skipTutorial();return;}
+  if(tutStep===2) showTab('tracker');
+  if(tutStep===4) showTab('dashboard');
+  if(tutStep===5) showTab(chTabs[0].id);
+  setTimeout(()=>renderTutStep(),tutStep>=4?320:60);
+}
+
+function renderTutStep(){
+  const steps=getTutSteps();
+  const step=steps[tutStep];
+  document.getElementById('tut-step').textContent=`Step ${tutStep+1} of ${steps.length}`;
+  document.getElementById('tut-title').textContent=step.title;
+  document.getElementById('tut-body').textContent=step.body;
+  const nextBtn=document.getElementById('tut-next-btn');
+  nextBtn.textContent=tutStep===steps.length-1?'Finish ✓':'Next →';
+  document.getElementById('tut-dots').innerHTML=steps.map((_,i)=>`<div class="tut-dot${i===tutStep?' active':''}"></div>`).join('');
+  tutSpeak(`${step.title}. ${step.body}`);
+
+  const spotlight=document.getElementById('tut-spotlight');
+  const card=document.getElementById('tut-card');
+  const arrow=document.getElementById('tut-arrow');
+  const vw=window.innerWidth;
+  const vh=window.innerHeight;
+  const CARD_W=Math.min(320,vw*0.92);
+  const CARD_H=260; // estimated
+  const PAD=10; // padding around highlighted element
+  const GAP=14; // gap between spotlight and card
+
+  if(step.target){
+    const el=document.getElementById(step.target);
+    if(el){
+      const r=el.getBoundingClientRect();
+      // Spotlight box
+      const sl=Math.max(0,r.left-PAD);
+      const st=Math.max(0,r.top-PAD);
+      const sw=Math.min(vw,r.right+PAD)-sl;
+      const sh=Math.min(vh,r.bottom+PAD)-st;
+      spotlight.style.cssText=`left:${sl}px;top:${st}px;width:${sw}px;height:${sh}px;display:block;`;
+
+      // Decide card position: prefer below, flip above if not enough room
+      const spaceBelow=vh-(st+sh)-GAP;
+      const spaceAbove=st-GAP;
+      let cardTop,arrowDir;
+      if(spaceBelow>=CARD_H||spaceBelow>=spaceAbove){
+        cardTop=st+sh+GAP;
+        arrowDir='up';
+      } else {
+        cardTop=st-GAP-CARD_H;
+        arrowDir='down';
+      }
+      // Clamp card top/bottom to viewport
+      cardTop=Math.max(8,Math.min(vh-CARD_H-8,cardTop));
+      // Horizontal: align with spotlight left, clamp to viewport
+      let cardLeft=sl;
+      cardLeft=Math.max(8,Math.min(vw-CARD_W-8,cardLeft));
+
+      card.style.cssText=`top:${cardTop}px;left:${cardLeft}px;width:${CARD_W}px;`;
+      // Arrow horizontal position relative to card
+      const arrowLeft=Math.min(Math.max(sl-cardLeft+sw/2-9,12),CARD_W-30);
+      arrow.style.cssText=`left:${arrowLeft}px;`;
+      arrow.className=`tut-arrow ${arrowDir}`;
+      return;
+    }
+  }
+  // No target — centre card, hide spotlight
+  spotlight.style.cssText='display:none;';
+  arrow.className='tut-arrow';arrow.style.cssText='display:none;';
+  const cardTop=Math.round((vh-CARD_H)/2);
+  const cardLeft=Math.round((vw-CARD_W)/2);
+  card.style.cssText=`top:${Math.max(8,cardTop)}px;left:${Math.max(8,cardLeft)}px;width:${CARD_W}px;`;
+}
+
+// ── Onboarding ──
+let obMode=null;
+function obSelectMode(mode){
+  obMode=mode;
+  document.getElementById('ob-read').classList.toggle('selected',mode==='read');
+  document.getElementById('ob-voice').classList.toggle('selected',mode==='voice');
+  document.getElementById('ob-next1').disabled=false;
+}
+function obGoStep2(){
+  if(!obMode) return;
+  document.getElementById('onboard-s1').classList.remove('active');
+  document.getElementById('onboard-s2').classList.add('active');
+  setTimeout(()=>document.getElementById('ob-name-input').focus(),100);
+}
+function obSkip(){
+  document.getElementById('onboard-overlay').classList.remove('open');
+  localStorage.setItem(TUT_KEY,'1');
+}
+function obFinish(skip){
+  const nameVal=skip==='skip'?'':document.getElementById('ob-name-input').value.trim();
+  if(nameVal){
+    appSettings.userName=nameVal;
+    saveAppSettings();
+  }
+  if(obMode){
+    tutVoiceMode=obMode;
+    localStorage.setItem(TUT_VOICE_KEY,obMode);
+  }
+  document.getElementById('onboard-overlay').classList.remove('open');
+  updateTutModeBtn();
+  // Now launch the actual tutorial
+  startTutorial();
+}
+
+
+// ══════════════════════════════════════════════
+//  FAQ
+// ══════════════════════════════════════════════
+const FAQ_ITEMS=[
+  {q:'How does Start / Stop work?',a:'Tap an activity to select it, then tap Start. The app records a start timestamp. Tap again (now showing Stop) to record the end. The session duration is the difference. If you forgot to log, use the Override Time field to enter a past time before tapping Start or Stop.'},
+  {q:'How is session duration calculated?',a:'When you log a Stop, the app finds the most recent Start for the same activity that came before it and calculates the difference. Pairs are matched in order — Start → Stop → Start → Stop.'},
+  {q:'Can I edit or correct a logged entry?',a:'Yes. In the Tracker tab, find the entry in the table and tap the pencil icon. You can change the activity, type (Start/Stop), timestamp, and note. Changes take effect immediately.'},
+  {q:'What does "override time" do?',a:'It lets you backfill a session you forgot to log in real time. Enter the actual time it started (or stopped), then tap the button. The entry will be saved with that timestamp instead of right now.'},
+  {q:'How do I add a new activity?',a:'In the Tracker tab, type the name in the input at the bottom of the Activities panel and tap + or press Enter. It will appear as a chip you can select.'},
+  {q:'How do Agenda tabs work?',a:'Each Agenda tab is an independent meeting workspace with its own agenda, topics, speakers, timer, and saved report. You can have up to 7 tabs total (1 default + 6 extra). Add more via Settings → Agenda tabs.'},
+  {q:'What is the difference between a topic and a subtopic/speaker?',a:'A topic is a section of your agenda. If you add subtopics or speakers to a topic, they are timed individually and the topic\'s total time is the sum of all its subtopics. A topic without subtopics is timed as a standalone item.'},
+  {q:'How does the Agenda timer work?',a:'Tap Start meeting. The app auto-stamps the actual start time on the first item. When you tap Next (→), it stamps the end time on the current item and the start time on the next one. At the end, a variance report shows who ran over or under.'},
+  {q:'What does the pacing badge mean?',a:'During a meeting, the badge below the countdown shows whether you are On time, Running over, or Running under relative to where you should be in the agenda at that moment — not just whether the clock has expired.'},
+  {q:'Where are my meeting reports saved?',a:'Automatically saved when you stop or complete a meeting. Access them via the ⚙ gear icon → Saved meeting reports. Up to 20 reports are kept. You can expand any report to see the full per-speaker breakdown and delete ones you no longer need.'},
+  {q:'What does the Dashboard analytics section show?',a:'Two things: (1) Meeting analytics — based on your saved Chairman reports, it tells you whether you typically run meetings on time, over, or under, and by how much on average. (2) Activity averages — your typical daily time split across tracked activities.'},
+  {q:'How do I rename tabs?',a:'Tap the ⚙ gear icon → Rename core tabs to rename Tracker, Dashboard, or Agenda. For extra Agenda tabs, use the name inputs in the Agenda tabs section of Settings.'},
+  {q:'Can I delete an Agenda tab?',a:'Yes — hover over it (or tap it on mobile) and tap the × that appears on the tab. You can also delete it from Settings. The default Agenda tab cannot be deleted, only renamed. All data in a deleted tab is permanently removed.'},
+  {q:'How do I switch between voice and read tutorial?',a:'Go to ⚙ Settings → Help → Tutorial mode. Tap the button to toggle between Read mode (text only) and Voice narration (the Web Speech API reads the steps aloud, including your name if you set it).'},
+  {q:'How do I replay the tutorial?',a:'Tap the ⚙ gear icon, scroll to the Help section, and tap "Show tutorial".'}
+];
+
+function openFaq(){
+  const list=document.getElementById('faq-list');
+  list.innerHTML=FAQ_ITEMS.map((f,i)=>`
+    <div class="faq-item" id="faq-item-${i}">
+      <div class="faq-q" onclick="toggleFaq(${i})">
+        <span>${escHtml(f.q)}</span>
+        <i class="ti ti-chevron-down faq-chevron" aria-hidden="true"></i>
+      </div>
+      <div class="faq-a" id="faq-a-${i}">${escHtml(f.a)}</div>
+    </div>`).join('');
+  document.getElementById('faq-overlay').classList.add('open');
+}
+function closeFaq(){document.getElementById('faq-overlay').classList.remove('open');}
+function faqOverlayClick(e){if(e.target===document.getElementById('faq-overlay'))closeFaq();}
+function toggleFaq(i){
+  const item=document.getElementById('faq-item-'+i);
+  const ans=document.getElementById('faq-a-'+i);
+  const isOpen=item.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-item').forEach(el=>{el.classList.remove('open');});
+  document.querySelectorAll('.faq-a').forEach(el=>{el.classList.remove('open');});
+  if(!isOpen){item.classList.add('open');ans.classList.add('open');}
+}
+
+// ══════════════════════════════════════════════
+//  DASHBOARD ANALYTICS
+// ══════════════════════════════════════════════
+function renderDashAnalytics(){
+  const el=document.getElementById('dash-analytics');
+  if(!el) return;
+  el.innerHTML=renderMeetingInsights()+renderActivityAverages();
+}
+
+function renderMeetingInsights(){
+  if(!savedReports.length){
+    return`<div class="insight-card">
+      <div class="insight-header"><span class="insight-title">Meeting patterns</span></div>
+      <div class="no-data-note">No saved meeting reports yet. Complete a Chairman meeting to see your patterns here.</div>
+    </div>`;
+  }
+  // Aggregate across all reports
+  const overages=savedReports.map(r=>r.totalActual-r.totalAlloc).filter(v=>!isNaN(v));
+  const avgOverage=overages.reduce((a,b)=>a+b,0)/overages.length;
+  const overCount=overages.filter(v=>v>0).length;
+  const underCount=overages.filter(v=>v<0).length;
+  const onTimeCount=overages.filter(v=>Math.abs(v)<=1).length;
+  const total=overages.length;
+  const overPct=Math.round((overCount/total)*100);
+  const underPct=Math.round((underCount/total)*100);
+  const onTimePct=Math.round((onTimeCount/total)*100);
+
+  // Verdict sentence
+  let verdict='';
+  if(total<3){verdict=`Based on ${total} meeting${total!==1?'s':''}. Log at least 3 for reliable patterns.`;}
+  else if(overPct>=60){verdict=`You tend to run meetings <strong style="color:var(--red)">over time</strong> — ${overPct}% of your meetings ran long, by an average of <strong>${chFmtMins(Math.abs(avgOverage))}</strong>.`;}
+  else if(underPct>=60){verdict=`You tend to finish meetings <strong style="color:var(--orange)">early</strong> — ${underPct}% of your meetings finished under, by an average of <strong>${chFmtMins(Math.abs(avgOverage))}</strong>. Consider tighter allocations.`;}
+  else if(onTimePct>=50){verdict=`You run meetings <strong style="color:var(--accent)">on time</strong> — ${onTimePct}% of meetings finished within 1 minute of schedule. Well chaired.`;}
+  else{verdict=`Mixed results across ${total} meetings. ${overPct}% over, ${underPct}% under, ${onTimePct}% on time.`;}
+
+  // Per-speaker repeat offenders across all reports
+  const speakerVars={};
+  savedReports.forEach(r=>{
+    r.rows.filter(x=>!x.isTopic&&x.variance!==null).forEach(x=>{
+      const name=x.label.trim();
+      if(!speakerVars[name]) speakerVars[name]={total:0,count:0};
+      speakerVars[name].total+=x.variance;
+      speakerVars[name].count++;
+    });
+  });
+  const speakers=Object.entries(speakerVars).filter(([,v])=>v.count>=2).sort((a,b)=>(b[1].total/b[1].count)-(a[1].total/a[1].count)).slice(0,5);
+
+  const speakerRows=speakers.length?`
+    <div style="margin-top:14px;">
+      <div class="ptitle" style="margin-bottom:8px;">Repeat speakers (avg variance)</div>
+      ${speakers.map(([name,v])=>{
+        const avg=v.total/v.count;
+        const cls=avg>0?'var-over':avg<0?'var-under':'var-ok';
+        const lbl=avg>0?`+${chFmtMins(avg)} avg over`:avg<0?`${chFmtMins(Math.abs(avg))} avg under`:'on time';
+        return`<div class="insight-row">
+          <span class="insight-label">${escHtml(name)}</span>
+          <span style="font-size:12px;font-family:var(--mono);">${v.count} appearances</span>
+          <span class="variance-tag ${cls}" style="margin-left:auto;">${lbl}</span>
+        </div>`;
+      }).join('')}
+    </div>`:
+    (total>=3?'<div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:10px;">No repeat speakers yet — needs 2+ appearances to track.</div>':'');
+
+  // Badge
+  const badgeClass=overPct>=60?'var-over':underPct>=60?'var-under':'var-ok';
+  const badgeLabel=overPct>=60?'Tends over':underPct>=60?'Tends early':'On track';
+
+  return`<div class="insight-card">
+    <div class="insight-header">
+      <span class="insight-title">Meeting patterns — ${total} meeting${total!==1?'s':''}</span>
+      <span class="insight-badge variance-tag ${badgeClass}">${badgeLabel}</span>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+      <div class="ch-stat"><div class="ch-stat-label">Over</div><div class="ch-stat-val ${overCount>0?'over':'ok'}">${overCount}</div></div>
+      <div class="ch-stat"><div class="ch-stat-label">Under</div><div class="ch-stat-val">${underCount}</div></div>
+      <div class="ch-stat"><div class="ch-stat-label">On time</div><div class="ch-stat-val ok">${onTimeCount}</div></div>
+      <div class="ch-stat"><div class="ch-stat-label">Avg variance</div><div class="ch-stat-val ${avgOverage>0?'over':avgOverage<0?'warn':'ok'}">${avgOverage>0?'+':''}${chFmtMins(avgOverage)}</div></div>
+    </div>
+    <div class="insight-verdict">${verdict}</div>
+    ${speakerRows}
+  </div>`;
+}
+
+function renderActivityAverages(){
+  const sessions=calcSessions(state.entries).filter(s=>s.stopTs);
+  if(!sessions.length){
+    return`<div class="insight-card">
+      <div class="insight-header"><span class="insight-title">Activity averages</span></div>
+      <div class="no-data-note">No completed sessions yet. Start tracking activities to see your daily averages here.</div>
+    </div>`;
+  }
+  // Group sessions by date, then by activity
+  const byDate={};
+  sessions.forEach(s=>{
+    const dk=dateKey(s.startTs);
+    if(!byDate[dk]) byDate[dk]={};
+    byDate[dk][s.activity]=(byDate[dk][s.activity]||0)+s.durationMs;
+  });
+  const days=Object.values(byDate);
+  const numDays=days.length;
+  // Average per activity per day
+  const actTotals={};
+  days.forEach(d=>Object.entries(d).forEach(([a,ms])=>{actTotals[a]=(actTotals[a]||0)+ms;}));
+  const actAvgs=Object.entries(actTotals).map(([a,total])=>({activity:a,avgMs:total/numDays})).sort((a,b)=>b.avgMs-a.avgMs);
+  const maxAvg=actAvgs[0]?.avgMs||1;
+  const colors=['var(--accent)','var(--blue)','var(--orange)','#7d6b8a','#4a7c89','#8a6b4a'];
+
+  return`<div class="insight-card">
+    <div class="insight-header">
+      <span class="insight-title">Activity averages — per day (${numDays} day${numDays!==1?'s':''})</span>
+    </div>
+    ${actAvgs.map((x,i)=>{
+      const pct=Math.round((x.avgMs/maxAvg)*100);
+      const color=colors[i%colors.length];
+      return`<div class="insight-row">
+        <span class="insight-label">${escHtml(x.activity)}</span>
+        <div class="insight-bar-wrap"><div class="insight-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+        <span class="insight-val">${fmtDur(x.avgMs)}</span>
+      </div>`;
+    }).join('')}
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:8px;">Average time per active day (days with at least one session).</div>
+  </div>`;
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escAttr(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+setInterval(updateClock,1000);updateClock();
+document.getElementById('new-act-input').addEventListener('keydown',e=>{if(e.key==='Enter')addActivity();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeSettings();closeFaq();if(tutActive)skipTutorial();if(document.getElementById('onboard-overlay').classList.contains('open'))obSkip();}});
+window.addEventListener('resize',()=>{if(tutActive) renderTutStep();});
+
+// Boot
+renderTabBar();
+renderChairmanTabsDom();
+showTab('tracker');
+renderActivities();
+renderTable();
+updateFilterOptions();
+updateTutModeBtn();
+// First-open: show onboarding modal
+if(!localStorage.getItem(TUT_KEY)){
+  setTimeout(()=>document.getElementById('onboard-overlay').classList.add('open'),500);
+}
+</script>
+</body>
+</html>
