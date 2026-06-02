@@ -158,11 +158,30 @@ tbody td{padding:8px 14px;vertical-align:middle;}
 .topic-name-input{flex:1;border:none;background:transparent;font-size:14px;font-family:var(--font);color:var(--text);outline:none;padding:0;}
 .topic-name-input::placeholder{color:var(--text3);}
 .topic-alloc{font-size:12px;font-family:var(--mono);color:var(--text2);flex-shrink:0;}
-.topic-verdict{font-size:11px;font-family:var(--mono);padding:2px 6px;border-radius:4px;flex-shrink:0;}
+.topic-verdict{font-size:11px;font-family:var(--mono);padding:2px 6px;border-radius:4px;flex-shrink:0;white-space:nowrap;background:transparent;border:1px solid currentColor;opacity:.9;}
 .topic-countdown{font-size:15px;font-family:var(--mono);font-weight:normal;flex-shrink:0;min-width:52px;text-align:right;}
 @keyframes overtime-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 .tc-over{color:var(--red);font-weight:bold;animation:overtime-pulse 1s ease-in-out infinite;}
 .sub-over{color:var(--red);font-weight:bold;animation:overtime-pulse 1s ease-in-out infinite;}
+
+/* Card-level warning pulse — amber/orange, gentle */
+@keyframes card-warn-pulse{
+  0%,100%{background:var(--orange-l);border-color:var(--orange);}
+  50%{background:transparent;border-color:var(--border);}
+}
+/* Card-level overtime pulse — red, more urgent */
+@keyframes card-over-pulse{
+  0%,100%{background:var(--red-l);border-color:var(--red);}
+  50%{background:transparent;border-color:var(--border);}
+}
+/* Topic block card pulses */
+.topic-block.card-warn{border:2px solid var(--orange);animation:card-warn-pulse 1.4s ease-in-out infinite;}
+.topic-block.card-warn .topic-header{background:var(--orange-l)!important;border-bottom:1px solid var(--orange);}
+.topic-block.card-over{border:2px solid var(--red);animation:card-over-pulse .9s ease-in-out infinite;}
+.topic-block.card-over .topic-header{background:var(--red-l)!important;border-bottom:1px solid var(--red);}
+/* Sub row pulses */
+.sub-row.sub-warn{background:var(--orange-l)!important;border-color:var(--orange)!important;animation:card-warn-pulse 1.4s ease-in-out infinite;}
+.sub-row.sub-card-over{background:var(--red-l)!important;border-color:var(--red)!important;animation:card-over-pulse .9s ease-in-out infinite;}
 .topic-actions{display:flex;gap:5px;flex-shrink:0;}
 .topic-body{padding:10px 14px 14px;border-top:1px solid var(--border);}
 .alloc-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
@@ -966,13 +985,16 @@ function chRenderAgenda(id){
     const items=chFlatItems(id);
     const isCurrentTopic=chGetRT(id).running&&items[chGetRT(id).currentIdx]&&items[chGetRT(id).currentIdx].topicIdx===ti;
 
-    // Topic-level verdict badge (only when all subs done or topic done)
+    // Topic-level verdict badge — show when done OR when times are manually filled in
     let verdictHtml='';
-    if(st==='done'){
-      const topicActual=hasSubs?chTopicActualMins(t):chActualMins(t);
-      if(topicActual!==null){
-        const v=topicActual-effectiveMins;
-        verdictHtml=`<span class="topic-verdict ${v>0?'var-over':v<0?'var-under':'var-ok'}">${v>0?`▲ +${chFmtMins(v)}`:v<0?`▼ ${chFmtMins(Math.abs(v))}`:'✓ on time'}</span>`;
+    const topicActualForVerdict=hasSubs?chTopicActualMins(t):chActualMins(t);
+    if(st==='done'||(topicActualForVerdict!==null)){
+      if(topicActualForVerdict!==null){
+        const v=topicActualForVerdict-effectiveMins;
+        const absV=Math.abs(v);
+        const label=v>0?`Over by ${chFmtMins(absV)}`:v<0?`Under by ${chFmtMins(absV)}`:'On time';
+        const cls=v>0?'r-over':v<0?'r-under':'r-ok';
+        verdictHtml=`<span class="topic-verdict ${cls}">${label}</span>`;
       }
     }
 
@@ -984,8 +1006,8 @@ function chRenderAgenda(id){
         <input class="topic-name-input" type="text" placeholder="Topic name…" value="${escAttr(t.name)}"
           onclick="event.stopPropagation()"
           oninput="chGetData('${id}').topics[${ti}].name=this.value;chSaveTab('${id}');" maxlength="80"/>
-        <span class="topic-alloc">${effectiveMins}m</span>
         ${verdictHtml}
+        <span class="topic-alloc">${effectiveMins}m</span>
         <span class="topic-countdown tc-idle" id="cd-topic-${id}-${ti}">—</span>
         <div class="topic-actions" onclick="event.stopPropagation()">
           ${isCurrentTopic&&!hasSubs?`<button class="btn btn-sm btn-stop" onclick="chNextItem('${id}')" title="Next item"><i class="ti ti-arrow-right" aria-hidden="true"></i></button>`:''}
@@ -1253,6 +1275,12 @@ function chStop(id){
   });
   const pb=document.getElementById('ch-progress-bar-'+id);
   if(pb) pb.style.width='0%';
+  // Clear all card pulse states
+  const agendaList=document.getElementById('agenda-list-'+id);
+  if(agendaList){
+    agendaList.querySelectorAll('.card-warn,.card-over').forEach(el=>el.classList.remove('card-warn','card-over'));
+    agendaList.querySelectorAll('.sub-warn,.sub-card-over').forEach(el=>el.classList.remove('sub-warn','sub-card-over'));
+  }
   chRenderAgenda(id);
   if(wasRunning){
     chSaveReportSnapshot(id);
@@ -1372,12 +1400,40 @@ function chTickItem(id){
   if(!it) return;
   const rbcur=document.getElementById('rb-current-'+id);
   if(rbcur) rbcur.textContent=it.label;
+
+  // Helper: set card pulse state on a topic block
+  function setTopicCardState(topicIdx, state){
+    // Find the topic block — nth-child is unreliable during animation, use data lookup
+    const list=document.getElementById('agenda-list-'+id);
+    if(!list) return;
+    const blocks=list.querySelectorAll('.topic-block');
+    const block=blocks[topicIdx];
+    if(!block) return;
+    block.classList.remove('card-warn','card-over');
+    if(state==='warn') block.classList.add('card-warn');
+    if(state==='over') block.classList.add('card-over');
+  }
+
+  // Helper: set card pulse state on a sub row
+  function setSubCardState(topicIdx, subIdx, state){
+    const el=document.getElementById(`sub-${id}-${topicIdx}-${subIdx}`);
+    if(!el) return;
+    el.classList.remove('sub-warn','sub-card-over','sub-active');
+    if(state==='warn') el.classList.add('sub-warn');
+    else if(state==='over') el.classList.add('sub-card-over');
+    else el.classList.add('sub-active');
+  }
+
   rt.itemTimer=setInterval(()=>{
     if(!rt.running) return;
     const elapsed=(Date.now()-rt.itemStartTs)/1000;
     const allocSecs=(it.allocMins||0)*60;
     const remaining=allocSecs-elapsed;
-    const cdId=it.subIdx===null?`cd-topic-${id}-${it.topicIdx}`:`cd-sub-${id}-${it.topicIdx}-${it.subIdx}`;
+
+    // Update countdown text + number colour
+    const cdId=it.subIdx===null
+      ?`cd-topic-${id}-${it.topicIdx}`
+      :`cd-sub-${id}-${it.topicIdx}-${it.subIdx}`;
     const el=document.getElementById(cdId);
     if(el){
       el.textContent=chSecsToHMS(remaining);
@@ -1387,7 +1443,17 @@ function chTickItem(id){
         el.className='sub-countdown'+(remaining<0?' sub-over':remaining<60?' tc-warn':' tc-run');
       }
     }
-    if(it.subIdx!==null){
+
+    // Card-level pulse state for current item
+    const cardState=remaining<0?'over':remaining<60?'warn':'active';
+
+    if(it.subIdx===null){
+      // Standalone topic — pulse the block
+      setTopicCardState(it.topicIdx, cardState==='active'?null:cardState);
+    } else {
+      // Subtopic — pulse the sub row
+      setSubCardState(it.topicIdx, it.subIdx, cardState);
+      // Also update parent topic block aggregate countdown and pulse
       const data=chGetData(id);
       const subs=data.topics[it.topicIdx]?data.topics[it.topicIdx].subtopics||[]:[];
       let topicRemaining=remaining;
@@ -1397,6 +1463,9 @@ function chTickItem(id){
         topicEl.textContent=chSecsToHMS(topicRemaining);
         topicEl.className='topic-countdown'+(topicRemaining<0?' tc-over':topicRemaining<60?' tc-warn':' tc-run');
       }
+      // Pulse topic header if sub is in warning/overtime (so it's visible when collapsed)
+      const topicCardState=topicRemaining<0?'over':topicRemaining<60?'warn':null;
+      setTopicCardState(it.topicIdx, topicCardState);
     }
   },500);
 }
@@ -1746,21 +1815,31 @@ function obFinish(skip){
 //  FAQ
 // ══════════════════════════════════════════════
 const FAQ_ITEMS=[
+  // ── Tracker ──
   {q:'How does Start / Stop work?',a:'Tap an activity to select it, then tap Start. The app records a start timestamp. Tap again (now showing Stop) to record the end. The session duration is the difference. If you forgot to log, use the Override Time field to enter a past time before tapping Start or Stop.'},
   {q:'How is session duration calculated?',a:'When you log a Stop, the app finds the most recent Start for the same activity that came before it and calculates the difference. Pairs are matched in order — Start → Stop → Start → Stop.'},
   {q:'Can I edit or correct a logged entry?',a:'Yes. In the Tracker tab, find the entry in the table and tap the pencil icon. You can change the activity, type (Start/Stop), timestamp, and note. Changes take effect immediately.'},
   {q:'What does "override time" do?',a:'It lets you backfill a session you forgot to log in real time. Enter the actual time it started (or stopped), then tap the button. The entry will be saved with that timestamp instead of right now.'},
   {q:'How do I add a new activity?',a:'In the Tracker tab, type the name in the input at the bottom of the Activities panel and tap + or press Enter. It will appear as a chip you can select.'},
-  {q:'How do Agenda tabs work?',a:'Each Agenda tab is an independent meeting workspace with its own agenda, topics, speakers, timer, and saved report. You can have up to 7 tabs total (1 default + 6 extra). Add more via Settings → Agenda tabs.'},
-  {q:'What is the difference between a topic and a subtopic/speaker?',a:'A topic is a section of your agenda. If you add subtopics or speakers to a topic, they are timed individually and the topic\'s total time is the sum of all its subtopics. A topic without subtopics is timed as a standalone item.'},
-  {q:'How does the Agenda timer work?',a:'Tap Start meeting. The app auto-stamps the actual start time on the first item. When you tap Next (→), it stamps the end time on the current item and the start time on the next one. At the end, a variance report shows who ran over or under.'},
-  {q:'What does the pacing badge mean?',a:'During a meeting, the badge below the countdown shows whether you are On time, Running over, or Running under relative to where you should be in the agenda at that moment — not just whether the clock has expired.'},
-  {q:'Where are my meeting reports saved?',a:'Automatically saved when you stop or complete a meeting. Access them via the ⚙ gear icon → Saved meeting reports. Up to 20 reports are kept. You can expand any report to see the full per-speaker breakdown and delete ones you no longer need.'},
-  {q:'What does the Dashboard analytics section show?',a:'Two things: (1) Meeting analytics — based on your saved Chairman reports, it tells you whether you typically run meetings on time, over, or under, and by how much on average. (2) Activity averages — your typical daily time split across tracked activities.'},
-  {q:'How do I rename tabs?',a:'Tap the ⚙ gear icon → Rename core tabs to rename Tracker, Dashboard, or Agenda. For extra Agenda tabs, use the name inputs in the Agenda tabs section of Settings.'},
-  {q:'Can I delete an Agenda tab?',a:'Yes — hover over it (or tap it on mobile) and tap the × that appears on the tab. You can also delete it from Settings. The default Agenda tab cannot be deleted, only renamed. All data in a deleted tab is permanently removed.'},
-  {q:'How do I switch between voice and read tutorial?',a:'Go to ⚙ Settings → Help → Tutorial mode. Tap the button to toggle between Read mode (text only) and Voice narration (the Web Speech API reads the steps aloud, including your name if you set it).'},
-  {q:'How do I replay the tutorial?',a:'Tap the ⚙ gear icon, scroll to the Help section, and tap "Show tutorial".'}
+  // ── Agenda ──
+  {q:'How do Agenda tabs work?',a:'Each Agenda tab is an independent meeting workspace with its own agenda, topics, speakers, timer, and saved report. You can have up to 7 tabs total (1 default + 6 extra). Add more via Settings → Agenda tabs. Each tab can be renamed to match your meeting context.'},
+  {q:'What is the difference between a topic and a subtopic/speaker?',a:'A topic is a section of your agenda. If you add subtopics or speakers to a topic, they are each timed individually and the topic\'s total allocated time is the sum of all its subtopics. A topic without subtopics is timed as a single standalone item.'},
+  {q:'How does the Agenda timer work?',a:'Tap Start meeting. The app auto-stamps the actual start time on the first item. When you tap the → Next button, it stamps the end time on the current item and the start time on the next one. At the end you get a full variance report showing who ran over or under.'},
+  {q:'Can I manually enter times instead of using the live timer?',a:'Yes. Every topic and subtopic has Actual Start and Actual End time fields. You can type directly into them at any time. The overall progress bar, variance tags, and post-meeting report all update automatically when you do.'},
+  {q:'What do the warning and overtime pulses mean?',a:'When a topic or speaker has under 60 seconds remaining, the card pulses amber/orange as a heads-up. When time runs out and they go into overtime, the card pulses red more urgently. These are live signals only — they stop as soon as you advance to the next item.'},
+  {q:'What does "Over by / Under by / On time" next to a topic mean?',a:'Once a topic is completed (all its speakers done), a verdict badge appears next to the topic name showing how the whole topic performed against its allocated time. Red means it ran over, orange means it finished early, green means it was on time. This is independent per topic — one topic running over does not affect the next topic\'s verdict.'},
+  {q:'What does the pacing badge mean?',a:'During a meeting, the badge below the overall countdown shows whether you are On time, Running over, or Running under relative to where you should be in the agenda at that exact moment. It compares real elapsed time against the schedule position, not just whether the clock has expired.'},
+  {q:'Does one topic running over affect the next topic?',a:'No. Each topic is its own independent time bubble. If Topic 1 runs over, Topic 2 starts fresh with its own full allocation. The overage shows up only in the overall meeting timer and pacing badge, which reflect the cumulative effect on the whole meeting.'},
+  {q:'What happens if multiple speakers are in the same topic and one runs over?',a:'Each speaker\'s row shows their individual variance. The topic header shows the aggregate — whether the whole topic is over or under. A speaker being over does not alarm the topic header unless the total topic time budget is actually blown. You see both signals simultaneously.'},
+  {q:'How do I reset a meeting?',a:'Tap Reset. A choice appears: "Clear times only" keeps all your topics and speakers but wipes the actual start/end times so you can re-run the meeting. "Full reset" erases everything including topics and speakers, starting completely fresh.'},
+  {q:'Where are my meeting reports saved?',a:'Automatically saved when you stop or complete a meeting. You can also tap "Save to reports" on the post-meeting report section to manually save any meeting that has times filled in. Access reports via the ⚙ gear icon → Saved meeting reports. Up to 20 reports are kept per tab.'},
+  {q:'What does the Dashboard analytics section show?',a:'Two sections: (1) Meeting patterns — drawn from all your saved Agenda reports across all tabs, showing whether you typically run over, under, or on time, your average variance, and which repeat speakers tend to go long. (2) Activity averages — your typical daily time split across tracked activities based on your Tracker history.'},
+  // ── Settings & Data ──
+  {q:'How do I rename tabs?',a:'Tap the ⚙ gear icon → Rename core tabs to rename Dashboard, Tracker, or Agenda. For extra Agenda tabs, use the name inputs in the Agenda tabs section of Settings. Renaming a tab also updates the name in all its saved reports.'},
+  {q:'Can I delete an Agenda tab?',a:'Yes — tap the × that appears on the tab in the tab bar, or delete it from Settings. The default Agenda tab cannot be deleted, only renamed. All data in a deleted tab is permanently removed.'},
+  {q:'How do I backup and restore my data?',a:'Go to ⚙ Settings → Backup & Restore. Export saves all your data (tracker, agenda, reports, settings) as a single JSON file with a timestamp. Import reads it back and restores everything — it will overwrite your current data, so use with care. A reload happens automatically after restore.'},
+  {q:'How do I switch between voice and read tutorial?',a:'Go to ⚙ Settings → Help → Tutorial mode. Tap the button to toggle between Read mode (text only) and Voice narration (the Web Speech API reads each step aloud, including your name if you have set it in Settings).'},
+  {q:'How do I replay the tutorial?',a:'Tap the ⚙ gear icon, scroll to the Help section, and tap "Show tutorial". The tutorial adapts to your current tab names and will greet you by name if you have set one.'}
 ];
 
 function openFaq(){
